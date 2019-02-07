@@ -16,9 +16,9 @@ Version 1.9.4 (7 Feb 2019)
 ============================
 * Synch up to ElectrumX codebase (pulling in relevant & useful commits)
   (cculianu)
-* coin additions / updates: SmartCash (rc125), NIX (phamels), Minexcoin
-  (joesixpack), BitcoinCash (mblunderburg), Dash (zebra-lucky),
-  BitcoinCashRegtest (ezegom), AXE (slowdive), NOR (flo071),
+* coin additions / updates: BitcoinSV (kyuupichan), SmartCash (rc125),
+  NIX (phamels), Minexcoin (joesixpack), BitcoinCash (mblunderburg),
+  Dash (zebra-lucky), BitcoinCashRegtest (ezegom), AXE (slowdive), NOR (flo071),
   BitcoinPlus (bushsolo), Myriadcoin (cryptapus), Trezarcoin (ChekaZ), Bitcoin
   Diamond (John Shine), NMC (jeremyrand), Dash (zebra-lucky), PeerCoin
   (peerchemist), BCH testnet (Mark Lundeberg, cculianu), Unitus (ChekaZ)

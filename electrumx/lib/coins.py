@@ -376,6 +376,20 @@ class HOdlcoin(Coin):
     TX_PER_BLOCK = 5
 
 
+class BitcoinSV(BitcoinMixin, Coin):
+    NAME = "BitcoinSV"
+    SHORTNAME = "BSV"
+    TX_COUNT = 267318795
+    TX_COUNT_HEIGHT = 557037
+    TX_PER_BLOCK = 400
+    PEERS = [
+        'sv.electrumx.cash s t',
+        'sv1.hsmiths.com t60003 s60004',
+        'satoshi.vision.cash s',
+        'electroncash.cascharia.com s t',
+    ]
+
+
 class BitcoinCash(BitcoinMixin, Coin):
     NAME = "BitcoinCash"
     SHORTNAME = "BCH"
@@ -580,6 +594,14 @@ class BitcoinTestnetMixin(object):
     TX_PER_BLOCK = 21
     RPC_PORT = 18332
     PEER_DEFAULT_PORTS = {'t': '51001', 's': '51002'}
+
+
+class BitcoinSVTestnet(BitcoinTestnetMixin, Coin):
+    '''Bitcoin Testnet for Bitcoin SV daemons.'''
+    NAME = "BitcoinSV"
+    PEERS = [
+        'electrontest.cascharia.com t51001 s51002',
+    ]
 
 
 class BitcoinCashTestnet(BitcoinTestnetMixin, Coin):
