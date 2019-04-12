@@ -364,7 +364,7 @@ class SessionManager(object):
         self.banned_ips.add(ip)
         # --- disconnect all sessions matching IP
         ret = ''
-        for session in self.sessions:
+        for session in self.sessions.copy():
             pa = session.peer_address()
             if pa:
                 try:
