@@ -401,6 +401,8 @@ class SessionManager(object):
                     return await resp.text()
                 raise BadResponse(f'Bad Response: {resp.status}')
 
+        self.logger.info("_download_blacklist entered...")
+
         last_blacklist = None
         sleeptime = 60.0*5  # 5 mins
         while True:
@@ -408,20 +410,20 @@ class SessionManager(object):
             try:
                 async with aiohttp.ClientSession(timeout=20.0) as client:
                     text = await fetch(client)
-                    blacklist = json.loads(text)
-                    if not isinstance(blacklist, dict):
-                        self.logger.error(f"Blacklist was not a dict!")
-                    else:
-                        bl = blacklist.get('blacklist-ips', [])
-                        if isinstance(bl, list):
-                            bl = set(bl)
-                            if bl != last_blacklist:
-                                await self._got_new_blacklist(bl)
-                            else:
-                                self.logger.info("Blacklist unchanged...")
-                            last_blacklist = bl
-                        if last_blacklist is None:
-                            self.logger.error("No blacklist found.. will try later.")
+                blacklist = json.loads(text)
+                if not isinstance(blacklist, dict):
+                    self.logger.error(f"Blacklist was not a dict!")
+                else:
+                    bl = blacklist.get('blacklist-ips', [])
+                    if isinstance(bl, list):
+                        bl = set(bl)
+                        if bl != last_blacklist:
+                            await self._got_new_blacklist(bl)
+                        else:
+                            self.logger.info("Blacklist unchanged...")
+                        last_blacklist = bl
+                    if last_blacklist is None:
+                        self.logger.error("No blacklist found.. will try later.")
             except (aiohttp.ClientError, BadResponse) as e:
                 self.logger.error(f"Error downloading blacklist: {e}")
             except json.decoder.JSONDecodeError as e:
