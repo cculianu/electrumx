@@ -286,6 +286,10 @@ class PeerManager(object):
                 return True
         return False
 
+    def _dupes_for_peer(self, peer_ip_addr):
+        dupes = [p for p in self.peers.copy() if p.last_good and not p.bad and p.ip_addr == peer_ip_addr]
+        return dupes
+
     async def _verify_peer(self, session, peer):
         if not peer.is_tor:
             address = session.peer_address()
@@ -293,7 +297,7 @@ class PeerManager(object):
                 peer.ip_addr = address[0]
                 if ip_address(peer.ip_addr) in self.session_mgr.banned_ips:
                     raise BannedPeer(f'Peer IP {peer.ip_addr} is banned')
-                dupes = [p for p in self.peers.copy() if p.last_good and not p.bad and p.ip_addr == peer.ip_addr]
+                dupes = self._dupes_for_peer(peer.ip_addr)
                 if dupes:
                     raise DupePeer(f'Peer {peer} is a dupe! {len(dupes)} other peers with IP {peer.ip_addr} were found!')
 
@@ -466,6 +470,9 @@ class PeerManager(object):
                 if permit:
                     permit = not any(ip_address(info[-1][0]) in self.session_mgr.banned_ips for info in infos)
                     reason = 'banned IP'
+                if permit:
+                    permit = not any(self._dupes_for_peer(info[-1][0]) for info in infos)
+                    reason = 'dupe peer'
 
         if permit:
             self.logger.info(f'accepted add_peer request from {source} '
