@@ -25,6 +25,7 @@ simple_commands = {
     'peers': 'Print information about peer servers for the same coin',
     'sessions': 'Print information about client sessions',
     'stop': 'Shut down the server cleanly',
+    'banned_ips': "Show the list of banned IPs",
 }
 
 session_commands = {
@@ -39,6 +40,14 @@ other_commands = {
             'type': str,
             'dest': 'real_name',
             'help': 'e.g. "a.domain.name s995 t"',
+        },
+    ),
+    'banip': (
+        'ban an ip address (session or peer)',
+        [], {
+            'type': str,
+            'dest': 'ip',
+            'help': 'e.g. "10.11.12.123"',
         },
     ),
     'daemon_url': (
