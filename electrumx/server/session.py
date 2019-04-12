@@ -136,8 +136,8 @@ class SessionManager(object):
         # Event triggered when electrumx is listening for incoming requests.
         self.server_listening = Event()
         self.session_event = Event()
-        # banned ip_address instances
-        self.banned_ips = set()
+        # banned ip_address instances -> time of ban
+        self.banned_ips = defaultdict(time.time)
 
         # Set up the RPC request handlers
         cmds = ('add_peer banip banned_ips daemon_url disconnect getinfo groups log peers '
@@ -361,7 +361,7 @@ class SessionManager(object):
             ipaddr = ip_address(ip)
         except ValueError:
             return "invalid ip"
-        self.banned_ips.add(ipaddr)
+        self.banned_ips[ipaddr] = time.time()
         # --- disconnect all sessions matching IP
         ret = ''
         for session in self.sessions.copy():
@@ -387,14 +387,15 @@ class SessionManager(object):
         except ValueError:
             return "invalid IP"
         if ipaddr in self.banned_ips:
-            self.banned_ips.discard(ipaddr)
+            self.banned_ips.pop(ipaddr, None)
             return f'unbanned {ip}'
         else:
             return f'{ip} was not in ban list'
 
     async def rpc_banned_ips(self):
         ''' List banned ip addresses. '''
-        return [str(ip) for ip in self.banned_ips]
+        now = time.time()
+        return {str(ip) : now-when for ip, when in self.banned_ips.copy().items()}
 
     async def rpc_add_peer(self, real_name):
         '''Add a peer.
