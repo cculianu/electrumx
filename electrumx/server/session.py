@@ -408,7 +408,7 @@ class SessionManager(object):
         while True:
             t0  = time.time()
             try:
-                async with aiohttp.ClientSession(timeout=20.0) as client:
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30.0)) as client:
                     text = await fetch(client)
                 blacklist = json.loads(text)
                 if not isinstance(blacklist, dict):
