@@ -18,6 +18,7 @@ import ssl
 import time
 from collections import defaultdict
 from functools import partial
+from ipaddress import ip_address, IPv4Address, IPv6Address
 
 from aiorpcx import (
     RPCSession, JSONRPCAutoDetect, JSONRPCConnection,
@@ -135,6 +136,8 @@ class SessionManager(object):
         # Event triggered when electrumx is listening for incoming requests.
         self.server_listening = Event()
         self.session_event = Event()
+        # banned ip_address instances
+        self.banned_ips = set()
 
         # Set up the RPC request handlers
         cmds = ('add_peer daemon_url disconnect getinfo groups log peers '
@@ -351,6 +354,19 @@ class SessionManager(object):
         self.notified_height = height
 
     # --- LocalRPC command handlers
+    async def rpc_banip(self, ip):
+        ''' Ban an ip address, disconnecting any sessions or peers associated
+        with that address and preventing future connectiosn. '''
+        try:
+            ipaddr = ip_address(ip)
+        except ValueError:
+            return "invalid ip"
+        self.banned_ips.add(ip)
+        return f'banned {ip}'
+
+    async def rpc_banned_ips(self):
+        ''' List banned ip addresses. '''
+        return [str(ip) for ip in self.banned_ips]
 
     async def rpc_add_peer(self, real_name):
         '''Add a peer.
