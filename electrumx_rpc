@@ -82,6 +82,14 @@ other_commands = {
             'help': 'number of blocks to back up'
         },
     ),
+    'unbanip': (
+        'un-ban an ip address (session or peer)',
+        [], {
+            'type': str,
+            'dest': 'ip',
+            'help': 'e.g. "10.11.12.123"',
+        },
+    ),
 }
 
 

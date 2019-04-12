@@ -141,7 +141,7 @@ class SessionManager(object):
 
         # Set up the RPC request handlers
         cmds = ('add_peer banip banned_ips daemon_url disconnect getinfo groups log peers '
-                'query reorg sessions stop'.split())
+                'query reorg sessions stop unbanip'.split())
         LocalRPC.request_handlers = {cmd: getattr(self, 'rpc_' + cmd)
                                      for cmd in cmds}
 
@@ -356,13 +356,37 @@ class SessionManager(object):
     # --- LocalRPC command handlers
     async def rpc_banip(self, ip):
         ''' Ban an ip address, disconnecting any sessions or peers associated
-        with that address and preventing future connectiosn. '''
+        with that address and preventing future connections. '''
         try:
             ipaddr = ip_address(ip)
         except ValueError:
             return "invalid ip"
         self.banned_ips.add(ip)
-        return f'banned {ip}'
+        # --- disconnect all sessions matching IP
+        ret = ''
+        for session in self.sessions:
+            pa = session.peer_address()
+            if pa:
+                try:
+                    ipa = ip_address(pa[0])
+                except ValueError:
+                    self.logger.error("Could not parse IP: {}".format(pa[0]))
+                    continue  # Hmm.. this shouldn't really happen.
+                if ipa == ipaddr:
+                    # match, disconnect
+                    await session.close(force_after=1)
+                    ret += f"disconnected session {session.session_id};"
+        # ---
+        return ret + f'banned {ip}'
+
+    async def rpc_unbanip(self, ip):
+        ''' UnBan an ip address. '''
+        try:
+            ipaddr = ip_address(ip)
+        except ValueError:
+            return "invalid ip"
+        self.banned_ips.discatd(ip)
+        return ret + f'unbanned {ip}'
 
     async def rpc_banned_ips(self):
         ''' List banned ip addresses. '''
@@ -667,9 +691,25 @@ class SessionBase(RPCSession):
         status += str(self._concurrency.max_concurrent)
         return status
 
+    def _abort_if_banned(self):
+        pa = self.peer_address()
+        if not pa:
+            self.logger.error(f'could not determine peer IP address! FIXME!')
+        else:
+            try:
+                ipaddr = ip_address(pa[0])
+            except ValueError:
+                self.logger.error("Could not parse IP: {}".format(pa[0]))
+                return
+            if ipaddr in self.session_mgr.banned_ips:
+                self.logger.info("IP Address {} is banned, aborting connection".format(str(ipaddr)))
+                self.abort()
+                return True
+
     def connection_made(self, transport):
         '''Handle an incoming client connection.'''
         super().connection_made(transport)
+        self._abort_if_banned()
         self.session_id = next(self.session_counter)
         context = {'conn_id': f'{self.session_id}'}
         self.logger = util.ConnectionLogger(self.logger, context)
