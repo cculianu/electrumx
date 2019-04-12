@@ -401,8 +401,6 @@ class SessionManager(object):
                     return await resp.text()
                 raise BadResponse(f'Bad Response: {resp.status}')
 
-        self.logger.info("_download_blacklist entered...")
-
         last_blacklist = None
         sleeptime = 60.0*5  # 5 mins
         while True:
@@ -429,9 +427,9 @@ class SessionManager(object):
             except json.decoder.JSONDecodeError as e:
                 self.logger.error(f"Error decoding blacklist: {e}")
             except BaseException as e:
-                self.logger.error(f'BaseException: ({repr(e)})')
+                self.logger.error(f'[Blacklist DL] BaseException: ({repr(e)})')
             time_to_sleep = max(0, sleeptime - (time.time()-t0))
-            self.logger.info(f"[DL BL] sleeping {time_to_sleep} secs...")
+            self.logger.info(f"[Blacklist DL] will try again in {time_to_sleep:0.2f} secs")
             await sleep(time_to_sleep)
 
 
