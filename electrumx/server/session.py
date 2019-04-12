@@ -416,6 +416,9 @@ class SessionManager(object):
         ''' Downloads the blacklist.json file form the blacklist URL every 5
         minutes. '''
         URL = self.env.blacklist_url
+        if not URL:
+            self.logger.info("Blacklist download disabled")
+            return
         class BadResponse(Exception):
             pass
         async def fetch(client):
