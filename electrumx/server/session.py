@@ -19,7 +19,7 @@ import ssl
 import time
 from collections import defaultdict
 from functools import partial
-from ipaddress import ip_address, IPv4Address, IPv6Address
+from ipaddress import ip_address
 
 from aiorpcx import (
     RPCSession, JSONRPCAutoDetect, JSONRPCConnection,
@@ -388,7 +388,19 @@ class SessionManager(object):
                 peer.retry_event.set() # force it to wake up and drop itself
         return ret
 
-    async def _got_new_blacklist(self, bl):
+    async def _got_new_blacklist(self, last_blacklist, bl):
+        if isinstance(last_blacklist, set):
+            no_longer_blacklisted = last_blacklist - bl
+            rmct = 0
+            for ip in no_longer_blacklisted:
+                try:
+                    ipaddr = ip_address(ip)
+                    rmct += int(bool(self.banned_ips.pop(ipaddr, None)))
+                except ValueError as e:
+                    # ignore bad IP in previous set
+                    continue
+            if rmct:
+                self.logger.info(f"{rmct} IPs removed from blacklist")
         for ip in bl:
             try:
                 ipaddr = ip_address(ip)
@@ -430,7 +442,7 @@ class SessionManager(object):
                         err = False
                         bl = set(bl)
                         if bl != last_blacklist:
-                            await self._got_new_blacklist(bl)
+                            await self._got_new_blacklist(last_blacklist, bl)
                         else:
                             self.logger.info("Blacklist unchanged...")
                         last_blacklist = bl
@@ -633,11 +645,11 @@ class SessionManager(object):
             # Peer discovery should start after the external servers
             # because we connect to ourself
             async with TaskGroup() as group:
+                await group.spawn(self._download_blacklist())
                 await group.spawn(self.peer_mgr.discover_peers())
                 await group.spawn(self._clear_stale_sessions())
                 await group.spawn(self._log_sessions())
                 await group.spawn(self._manage_servers())
-                await group.spawn(self._download_blacklist())
         finally:
             # Close servers and sessions
             await self._close_servers(list(self.servers.keys()))
