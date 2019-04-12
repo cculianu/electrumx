@@ -662,6 +662,7 @@ class SessionBase(RPCSession):
 
     MAX_CHUNK_SIZE = 2016
     session_counter = itertools.count()
+    session_id = -1  # This gets set once a connection is made
 
     def __init__(self, session_mgr, db, mempool, peer_mgr, kind):
         connection = JSONRPCConnection(JSONRPCAutoDetect)
@@ -732,6 +733,7 @@ class SessionBase(RPCSession):
     def connection_made(self, transport):
         '''Handle an incoming client connection.'''
         super().connection_made(transport)
+        self.logger.info(f"Connection made {self.peer_ip_address()}")
         if not self._abort_if_not_allowed():
             self.session_id = next(self.session_counter)
             context = {'conn_id': f'{self.session_id}'}
@@ -742,6 +744,7 @@ class SessionBase(RPCSession):
 
     def connection_lost(self, exc):
         '''Handle client disconnection.'''
+        self.logger.info(f"Connection lost {self.session_id}")
         self.session_mgr.remove_session(self)
         msg = ''
         if not self._can_send.is_set():
