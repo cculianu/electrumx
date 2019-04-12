@@ -428,6 +428,8 @@ class SessionManager(object):
                 self.logger.error(f"Error downloading blacklist: {e}")
             except json.decoder.JSONDecodeError as e:
                 self.logger.error(f"Error decoding blacklist: {e}")
+            except BaseException as e:
+                self.logger.error(f'BaseException: ({repr(e)})')
             time_to_sleep = max(0, sleeptime - (time.time()-t0))
             self.logger.info(f"[DL BL] sleeping {time_to_sleep} secs...")
             await sleep(time_to_sleep)
