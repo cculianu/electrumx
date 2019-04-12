@@ -621,7 +621,7 @@ class SessionManager(object):
 
     def remove_session(self, session):
         '''Remove a session from our sessions list if there.'''
-        self.sessions.remove(session)
+        self.sessions.discard(session)
         self.session_event.set()
 
     def new_subscription(self):
@@ -710,16 +710,17 @@ class SessionBase(RPCSession):
     def connection_made(self, transport):
         '''Handle an incoming client connection.'''
         super().connection_made(transport)
-        self._abort_if_banned()
-        self.session_id = next(self.session_counter)
-        context = {'conn_id': f'{self.session_id}'}
-        self.logger = util.ConnectionLogger(self.logger, context)
-        self.group = self.session_mgr.add_session(self)
-        self.logger.info(f'{self.kind} {self.peer_address_str()}, '
-                         f'{self.session_mgr.session_count():,d} total')
+        if not self._abort_if_banned():
+            self.session_id = next(self.session_counter)
+            context = {'conn_id': f'{self.session_id}'}
+            self.logger = util.ConnectionLogger(self.logger, context)
+            self.group = self.session_mgr.add_session(self)
+            self.logger.info(f'{self.kind} {self.peer_address_str()}, '
+                             f'{self.session_mgr.session_count():,d} total')
 
     def connection_lost(self, exc):
         '''Handle client disconnection.'''
+        self.logger.info("Connection_lost called...")
         self.session_mgr.remove_session(self)
         msg = ''
         if not self._can_send.is_set():
