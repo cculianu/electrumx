@@ -817,7 +817,7 @@ class SessionBase(RPCSession):
     def _abort_if_not_allowed(self):
         ok, reason = self.session_mgr.can_add_session(self)
         if not ok:
-            self.logger.info(f'{reason}; aborting connection')
+            self.logger.info(f'{reason}; refusing connection')
             self.abort()
             return True
 
