@@ -623,8 +623,8 @@ class SessionManager(object):
         ipaddr = session.peer_ip_address()
         if ipaddr in self.banned_ips:
             False, f'IP {ipaddr} is banned'
-        if self.ip_session_totals[ipaddr] < self.max_sessions_per_ip:
-            return False, f'IP {ipaddr} has reached max_session_per_ip ({self.max_session_per_ip})'
+        if self.ip_session_totals[ipaddr] >= self.max_sessions_per_ip:
+            return False, f'IP {ipaddr} has reached max_session_per_ip ({self.max_sessions_per_ip})'
         return True, ''
 
     def add_session(self, session):
