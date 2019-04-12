@@ -404,6 +404,10 @@ class BitcoinCash(BitcoinMixin, Coin):
         return False
 
 
+class BitcoinCashABC(BitcoinCash):
+    ''' Compatibility with ElectrumX's broken naming scheme. '''
+    NAME = "BitcoinCashABC"
+
 class BitcoinSegwit(BitcoinMixin, Coin):
     NAME = "BitcoinSegwit"
     DESERIALIZER = lib_tx.DeserializerSegWit
@@ -602,6 +606,9 @@ class BitcoinCashTestnet(BitcoinTestnetMixin, Coin):
                     '<br/><br/>')
         return False
 
+class BitcoinCashTestnetABC(BitcoinCashTestnet):
+    ''' Compatibility with ElectrumX's broken naming scheme. '''
+    NAME = "BitcoinCashABC"
 
 class BitcoinCashRegtest(BitcoinCashTestnet):
     NAME = "BitcoinCash"

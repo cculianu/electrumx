@@ -116,7 +116,7 @@ class SessionManager(object):
         self.bp = bp
         self.daemon = daemon
         self.mempool = mempool
-        self.peer_mgr = PeerManager(env, db)
+        self.peer_mgr = PeerManager(env, db, self)
         self.shutdown_event = shutdown_event
         self.logger = util.class_logger(__name__, self.__class__.__name__)
         self.servers = {}
@@ -618,6 +618,8 @@ class SessionManager(object):
             await session.spawn(session.notify, touched, height_changed)
 
     def can_add_session(self, session):
+        ''' Checks the ban list and also the max_sessions_per_ip, and returns
+        True if ok, False if limit reached or banned. '''
         ipaddr = session.peer_ip_address()
         if ipaddr not in self.banned_ips and self.ip_session_totals[ipaddr] < self.max_sessions_per_ip:
             return True
@@ -733,7 +735,6 @@ class SessionBase(RPCSession):
     def connection_made(self, transport):
         '''Handle an incoming client connection.'''
         super().connection_made(transport)
-        self.logger.info(f"Connection made {self.peer_ip_address()}")
         if not self._abort_if_not_allowed():
             self.session_id = next(self.session_counter)
             context = {'conn_id': f'{self.session_id}'}
@@ -744,7 +745,6 @@ class SessionBase(RPCSession):
 
     def connection_lost(self, exc):
         '''Handle client disconnection.'''
-        self.logger.info(f"Connection lost {self.session_id} {self.peer_ip_address()}")
         self.session_mgr.remove_session(self)
         msg = ''
         if not self._can_send.is_set():

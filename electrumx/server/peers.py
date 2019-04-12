@@ -13,6 +13,7 @@ import socket
 import ssl
 import time
 from collections import defaultdict, Counter
+from ipaddress import ip_address
 
 from aiorpcx import (Connector, RPCSession, SOCKSProxy,
                      Notification, handler_invocation,
@@ -30,6 +31,9 @@ WAKEUP_SECS = 300
 class BadPeerError(Exception):
     pass
 
+
+class BannedPeer(BadPeerError):
+    pass
 
 def assert_good(message, result, instance):
     if not isinstance(result, instance):
@@ -55,12 +59,13 @@ class PeerManager(object):
     Attempts to maintain a connection with up to 8 peers.
     Issues a 'peers.subscribe' RPC to them and tells them our data.
     '''
-    def __init__(self, env, db):
+    def __init__(self, env, db, session_mgr):
         self.logger = class_logger(__name__, self.__class__.__name__)
         # Initialise the Peer class
         Peer.DEFAULT_PORTS = env.coin.PEER_DEFAULT_PORTS
         self.env = env
         self.db = db
+        self.session_mgr = session_mgr
 
         # Our clearnet and Tor Peers, if any
         sclass = env.coin.SESSIONCLS
@@ -231,6 +236,9 @@ class PeerManager(object):
                         await self._verify_peer(session, peer)
                 is_good = True
                 break
+            except BannedPeer as e:
+                self.logger.error(f'{peer_text} is banned: ({e})')
+                return True # It's banend, so should drop it
             except BadPeerError as e:
                 self.logger.error(f'{peer_text} marking bad: ({e})')
                 peer.mark_bad()
@@ -277,6 +285,8 @@ class PeerManager(object):
             address = session.peer_address()
             if address:
                 peer.ip_addr = address[0]
+                if ip_address(peer.ip_addr) in self.session_mgr.banned_ips:
+                    raise BannedPeer(f'Peer IP {peer.ip_addr} is banned')
 
         # server.version goes first
         message = 'server.version'
@@ -444,6 +454,9 @@ class PeerManager(object):
             else:
                 permit = any(source == info[-1][0] for info in infos)
                 reason = 'source-destination mismatch'
+                if permit:
+                    permit = not any(ip_address(info[-1][0]) in self.session_mgr.banned_ips for info in infos)
+                    reason = 'banned IP'
 
         if permit:
             self.logger.info(f'accepted add_peer request from {source} '

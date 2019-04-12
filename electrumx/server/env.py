@@ -53,7 +53,6 @@ class Env(EnvBase):
             self.ssl_certfile = self.required('SSL_CERTFILE')
             self.ssl_keyfile = self.required('SSL_KEYFILE')
         self.rpc_port = self.integer('RPC_PORT', 8000)
-        self.max_subscriptions = self.integer('MAX_SUBSCRIPTIONS', 10000)
         self.banner_file = self.default('BANNER_FILE', None)
         self.tor_banner_file = self.default('TOR_BANNER_FILE',
                                             self.banner_file)
@@ -69,7 +68,7 @@ class Env(EnvBase):
         self.donation_address = self.default('DONATION_ADDRESS', '')
         # Server limits to help prevent DoS
         self.max_send = self.integer('MAX_SEND', self.coin.DEFAULT_MAX_SEND)
-        self.max_subs = self.integer('MAX_SUBS', 250000)
+        self.max_subs = self.integer('MAX_SUBS', 1000000)
         self.max_sessions = self.sane_max_sessions()
         self.max_sessions_per_ip = self.integer('MAX_SESSIONS_PER_IP', 50)
         self.max_session_subs = self.integer('MAX_SESSION_SUBS', 50000)
