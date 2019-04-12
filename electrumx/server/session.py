@@ -386,7 +386,7 @@ class SessionManager(object):
                 ipaddr = ip_address(ip)
                 if ipaddr not in self.banned_ips:
                     self.logger.info(f"Got new blacklist IP {ipaddr} from blacklist.json, banning and kicking...")
-                    self.banned_ips.add(ipaddr)
+                    self.banned_ips[ipaddr]  # defaultdict will set it to time.time()
                     await self._kill_all_for_ip(ipaddr)
             except ValueError as e:
                 self.logger.error(f"Could not parse IP {ip}: ({e})")
