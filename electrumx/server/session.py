@@ -622,7 +622,7 @@ class SessionManager(object):
         True if ok, False if limit reached or banned. '''
         ipaddr = session.peer_ip_address()
         if ipaddr in self.banned_ips:
-            False, f'IP {ipaddr} is banned'
+            return False, f'IP {ipaddr} is banned'
         if self.ip_session_totals[ipaddr] >= self.max_sessions_per_ip:
             return False, f'IP {ipaddr} has reached max_session_per_ip ({self.max_sessions_per_ip})'
         return True, ''
@@ -729,6 +729,7 @@ class SessionBase(RPCSession):
         if cannot parse '''
         pa = self.peer_address()
         if not pa:
+            self.logger.error(f'NO IP address for {self}! FIXME!')
             return None
         try:
             return ip_address(pa[0])
