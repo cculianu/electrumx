@@ -693,20 +693,21 @@ class SessionBase(RPCSession):
         return status
 
     def _abort_if_banned(self):
+        self.logger.info("abort_if_banned called...")
         pa = self.peer_address()
         if not pa:
             self.logger.error('could not determine peer IP address! FIXME!')
-        else:
-            try:
-                ipaddr = ip_address(pa[0])
-            except ValueError:
-                self.logger.error("Could not parse IP: {}".format(pa[0]))
-                return
-            self.logger.info("Banned IPs: {}", self.session_mgr.banned_ips)
-            if ipaddr in self.session_mgr.banned_ips:
-                self.logger.info("IP Address {} is banned, aborting connection".format(str(ipaddr)))
-                self.abort()
-                return True
+            return
+        try:
+            ipaddr = ip_address(pa[0])
+        except ValueError:
+            self.logger.error("Could not parse IP: {}".format(pa[0]))
+            return
+        self.logger.info("Banned IPs: {}".format(self.session_mgr.banned_ips))
+        if ipaddr in self.session_mgr.banned_ips:
+            self.logger.info("IP Address {} is banned, aborting connection".format(str(ipaddr)))
+            self.abort()
+            return True
 
     def connection_made(self, transport):
         '''Handle an incoming client connection.'''
