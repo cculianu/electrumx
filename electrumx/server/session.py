@@ -138,6 +138,8 @@ class SessionManager(object):
         self.session_event = Event()
         # banned ip_address instances -> time of ban
         self.banned_ips = defaultdict(time.time)
+        self.ip_session_totals = defaultdict(int)
+        self.max_sessions_per_ip = env.max_sessions_per_ip
 
         # Set up the RPC request handlers
         cmds = ('add_peer banip banned_ips daemon_url disconnect getinfo groups log peers '
@@ -615,8 +617,15 @@ class SessionManager(object):
         for session in self.sessions:
             await session.spawn(session.notify, touched, height_changed)
 
+    def can_add_session(self, session):
+        ipaddr = session.peer_ip_address()
+        if ipaddr not in self.banned_ips and self.ip_session_totals[ipaddr] < self.max_sessions_per_ip:
+            return True
+        return False
+
     def add_session(self, session):
         self.sessions.add(session)
+        self.ip_session_totals[session.peer_ip_address()] += 1
         self.session_event.set()
         gid = int(session.start_time - self.start_time) // 900
         if self.cur_group.gid != gid:
@@ -629,6 +638,10 @@ class SessionManager(object):
             # we do this test because we only want to set the event flag
             # if a real active session ended
             self.sessions.discard(session)
+            ipaddr = session.peer_ip_address()
+            self.ip_session_totals[ipaddr] -= 1
+            if self.ip_session_totals[ipaddr] <= 0:
+                del self.ip_session_totals[ipaddr]
             self.session_event.set()
 
     def new_subscription(self):
@@ -699,25 +712,27 @@ class SessionBase(RPCSession):
         status += str(self._concurrency.max_concurrent)
         return status
 
-    def _abort_if_banned(self):
-        pa = self.peer_address()
-        if not pa:
-            self.logger.error('could not determine peer IP address! FIXME!')
-            return
-        try:
-            ipaddr = ip_address(pa[0])
-        except ValueError:
-            self.logger.error("Could not parse IP: {}".format(pa[0]))
-            return
-        if ipaddr in self.session_mgr.banned_ips:
-            self.logger.info("IP Address {} is banned, aborting connection".format(str(ipaddr)))
+    def _abort_if_not_allowed(self):
+        if not self.session_mgr.can_add_session(self):
+            self.logger.info(f'IP Address {self.peer_ip_address()} is either banned or has reached max sessions per IP, aborting connection!')
             self.abort()
             return True
+
+    def peer_ip_address(self):
+        ''' Parses the peer_address() and returns an ip_address object, or None
+        if cannot parse '''
+        pa = self.peer_address()
+        if not pa:
+            return None
+        try:
+            return ip_address(pa[0])
+        except ValueError:
+            self.logger.error(f'Could not parse IP: {pa[0]}')
 
     def connection_made(self, transport):
         '''Handle an incoming client connection.'''
         super().connection_made(transport)
-        if not self._abort_if_banned():
+        if not self._abort_if_not_allowed():
             self.session_id = next(self.session_counter)
             context = {'conn_id': f'{self.session_id}'}
             self.logger = util.ConnectionLogger(self.logger, context)
