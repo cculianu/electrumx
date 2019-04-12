@@ -744,7 +744,7 @@ class SessionBase(RPCSession):
 
     def connection_lost(self, exc):
         '''Handle client disconnection.'''
-        self.logger.info(f"Connection lost {self.session_id}")
+        self.logger.info(f"Connection lost {self.session_id} {self.peer_ip_address()}")
         self.session_mgr.remove_session(self)
         msg = ''
         if not self._can_send.is_set():
