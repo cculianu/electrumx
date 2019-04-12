@@ -142,7 +142,7 @@ class SessionManager(object):
         self.max_sessions_per_ip = env.max_sessions_per_ip
 
         # Set up the RPC request handlers
-        cmds = ('add_peer banip banned_ips daemon_url disconnect getinfo groups log peers '
+        cmds = ('add_peer banip daemon_url disconnect getinfo groups listbanned log peers '
                 'query reorg sessions stop unbanip'.split())
         LocalRPC.request_handlers = {cmd: getattr(self, 'rpc_' + cmd)
                                      for cmd in cmds}
@@ -405,10 +405,11 @@ class SessionManager(object):
         else:
             return f'{ip} was not in ban list'
 
-    async def rpc_banned_ips(self):
+    async def rpc_listbanned(self):
         ''' List banned ip addresses. '''
         now = time.time()
-        return {str(ip) : now-when for ip, when in self.banned_ips.copy().items()}
+        return { 'banned-ips' : {str(ip) : now-when for ip, when in self.banned_ips.copy().items() },
+                 'banned-hostname-globs' : {} }
 
     async def rpc_add_peer(self, real_name):
         '''Add a peer.
