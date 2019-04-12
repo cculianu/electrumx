@@ -704,6 +704,7 @@ class SessionBase(RPCSession):
             self.logger.error("Could not parse IP: {}".format(pa[0]))
             return
         self.logger.info("Banned IPs: {}".format(self.session_mgr.banned_ips))
+        self.logger.info("Got IP: {}".format(ipaddr))
         if ipaddr in self.session_mgr.banned_ips:
             self.logger.info("IP Address {} is banned, aborting connection".format(str(ipaddr)))
             self.abort()
