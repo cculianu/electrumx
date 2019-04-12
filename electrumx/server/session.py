@@ -137,8 +137,8 @@ class SessionManager(object):
         # Event triggered when electrumx is listening for incoming requests.
         self.server_listening = Event()
         self.session_event = Event()
-        # banned ip_address instances -> time of ban
-        self.banned_ips = defaultdict(time.time)
+        # banned ip_address instances -> 'reason'
+        self.banned_ips = defaultdict(str)
         self.ban_queue = set()
         self.ip_session_totals = defaultdict(int)
         self.max_sessions_per_ip = env.max_sessions_per_ip
@@ -216,7 +216,7 @@ class SessionManager(object):
                 q = self.ban_queue.copy()
                 self.ban_queue.clear()
                 for ip in q:
-                    self.banned_ips[ip] = time.time()
+                    self.banned_ips[ip] = 'abuse'
                     self.logger.info(f'banning {ip} for abuse')
                     await self._kill_all_for_ip(ip)
 
@@ -395,7 +395,7 @@ class SessionManager(object):
             for ip in no_longer_blacklisted:
                 try:
                     ipaddr = ip_address(ip)
-                    rmct += int(bool(self.banned_ips.pop(ipaddr, None)))
+                    rmct += int(self.banned_ips.pop(ipaddr, None) is not None)
                 except ValueError as e:
                     # ignore bad IP in previous set
                     continue
@@ -405,8 +405,8 @@ class SessionManager(object):
             try:
                 ipaddr = ip_address(ip)
                 if ipaddr not in self.banned_ips:
-                    self.logger.info(f"Got new blacklist IP {ipaddr} from blacklist.json, banning and kicking...")
-                    self.banned_ips[ipaddr]  # defaultdict will set it to time.time()
+                    self.logger.info(f"Got new blacklist IP {ipaddr} from blacklist.json (banning and kicking)...")
+                    self.banned_ips[ipaddr] = 'blacklist'
                     await self._kill_all_for_ip(ipaddr)
             except ValueError as e:
                 self.logger.error(f"Could not parse IP {ip}: ({e})")
@@ -468,7 +468,7 @@ class SessionManager(object):
             ipaddr = ip_address(ip)
         except ValueError:
             return "invalid ip"
-        self.banned_ips[ipaddr] = time.time()
+        self.banned_ips[ipaddr] = 'rpc_banip'
         # --- disconnect all sessions matching IP
         ret = await self._kill_all_for_ip(ipaddr)
         # ---
@@ -488,8 +488,7 @@ class SessionManager(object):
 
     async def rpc_listbanned(self):
         ''' List banned ip addresses. '''
-        now = time.time()
-        return { 'banned-ips' : {str(ip) : now-when for ip, when in self.banned_ips.copy().items() },
+        return { 'banned-ips' : { str(ip) : reason for ip, reason in self.banned_ips.copy().items() },
                 }
 
     async def rpc_add_peer(self, real_name):
