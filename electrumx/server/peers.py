@@ -35,6 +35,9 @@ class BadPeerError(Exception):
 class BannedPeer(BadPeerError):
     pass
 
+class DupePeer(BadPeerError):
+    pass
+
 def assert_good(message, result, instance):
     if not isinstance(result, instance):
         raise BadPeerError(f'{message} returned bad result type '
@@ -236,6 +239,9 @@ class PeerManager(object):
                         await self._verify_peer(session, peer)
                 is_good = True
                 break
+            except DupePeer as e:
+                self.logger.error(f'{peer_text} dupe peer: {e}')
+                return True # It's a dupe. Disallow to prevent phisher sybills
             except BannedPeer as e:
                 self.logger.error(f'{peer_text} is banned: ({e})')
                 return True # It's banend, so should drop it
@@ -287,6 +293,9 @@ class PeerManager(object):
                 peer.ip_addr = address[0]
                 if ip_address(peer.ip_addr) in self.session_mgr.banned_ips:
                     raise BannedPeer(f'Peer IP {peer.ip_addr} is banned')
+                dupes = [p for p in self.peers.copy() if p.last_good and not p.bad and p.ip_addr == peer.ip_addr]
+                if dupes:
+                    raise DupePeer(f'Peer {peer} is a dupe! {len(dupes)} other peers with IP {peer.ip_addr} were found!')
 
         # server.version goes first
         message = 'server.version'
