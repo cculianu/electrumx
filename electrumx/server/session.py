@@ -384,7 +384,10 @@ class SessionManager(object):
         for ip in bl:
             try:
                 ipaddr = ip_address(ip)
-                self.logger.info(f"Got blacklist IP {ipaddr}!")
+                if ipaddr not in self.banned_ips:
+                    self.logger.info(f"Got new blacklist IP {ipaddr} from blacklist.json, banning and kicking...")
+                    self.banned_ips.add(ipaddr)
+                    await self._kill_all_for_ip(ipaddr)
             except ValueError as e:
                 self.logger.error(f"Could not parse IP {ip}: ({e})")
                 continue
