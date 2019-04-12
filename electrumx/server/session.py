@@ -403,14 +403,17 @@ class SessionManager(object):
 
         last_blacklist = None
         sleeptime = 60.0*5  # 5 mins
+        sleeptime_err = 30.0
         while True:
             t0  = time.time()
+            err = False
             try:
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30.0)) as client:
                     text = await fetch(client)
                 blacklist = json.loads(text)
                 if not isinstance(blacklist, dict):
                     self.logger.error(f"Blacklist was not a dict!")
+                    err = True
                 else:
                     bl = blacklist.get('blacklist-ips', [])
                     if isinstance(bl, list):
@@ -420,15 +423,22 @@ class SessionManager(object):
                         else:
                             self.logger.info("Blacklist unchanged...")
                         last_blacklist = bl
+                    else:
+                        err = True
                     if last_blacklist is None:
                         self.logger.error("No blacklist found.. will try later.")
+                        err = True
             except (aiohttp.ClientError, BadResponse) as e:
                 self.logger.error(f"Error downloading blacklist: {e}")
+                err = True
             except json.decoder.JSONDecodeError as e:
                 self.logger.error(f"Error decoding blacklist: {e}")
+                err = True
             except BaseException as e:
                 self.logger.error(f'[Blacklist DL] BaseException: ({repr(e)})')
-            time_to_sleep = max(0, sleeptime - (time.time()-t0))
+                err = True
+            st = sleeptime_err if err else sleeptime
+            time_to_sleep = max(0, st - (time.time()-t0))
             self.logger.info(f"[Blacklist DL] will try again in {time_to_sleep:0.2f} secs")
             await sleep(time_to_sleep)
 
