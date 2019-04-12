@@ -385,9 +385,12 @@ class SessionManager(object):
         try:
             ipaddr = ip_address(ip)
         except ValueError:
-            return "invalid ip"
-        self.banned_ips.discard(ipaddr)
-        return ret + f'unbanned {ip}'
+            return "invalid IP"
+        if ipaddr in self.banned_ips:
+            self.banned_ips.discard(ipaddr)
+            return f'unbanned {ip}'
+        else:
+            return f'{ip} was not in ban list'
 
     async def rpc_banned_ips(self):
         ''' List banned ip addresses. '''
@@ -621,8 +624,11 @@ class SessionManager(object):
 
     def remove_session(self, session):
         '''Remove a session from our sessions list if there.'''
-        self.sessions.discard(session)
-        self.session_event.set()
+        if session in self.sessions:
+            # we do this test because we only want to set the event flag
+            # if a real active session ended
+            self.sessions.discard(session)
+            self.session_event.set()
 
     def new_subscription(self):
         if self.subs_room <= 0:
@@ -720,7 +726,6 @@ class SessionBase(RPCSession):
 
     def connection_lost(self, exc):
         '''Handle client disconnection.'''
-        self.logger.info("Connection_lost called...")
         self.session_mgr.remove_session(self)
         msg = ''
         if not self._can_send.is_set():
