@@ -361,7 +361,7 @@ class SessionManager(object):
             ipaddr = ip_address(ip)
         except ValueError:
             return "invalid ip"
-        self.banned_ips.add(ip)
+        self.banned_ips.add(ipaddr)
         # --- disconnect all sessions matching IP
         ret = ''
         for session in self.sessions.copy():
@@ -386,7 +386,7 @@ class SessionManager(object):
             ipaddr = ip_address(ip)
         except ValueError:
             return "invalid ip"
-        self.banned_ips.discatd(ip)
+        self.banned_ips.discard(ipaddr)
         return ret + f'unbanned {ip}'
 
     async def rpc_banned_ips(self):
@@ -693,7 +693,6 @@ class SessionBase(RPCSession):
         return status
 
     def _abort_if_banned(self):
-        self.logger.info("abort_if_banned called...")
         pa = self.peer_address()
         if not pa:
             self.logger.error('could not determine peer IP address! FIXME!')
@@ -703,8 +702,6 @@ class SessionBase(RPCSession):
         except ValueError:
             self.logger.error("Could not parse IP: {}".format(pa[0]))
             return
-        self.logger.info("Banned IPs: {}".format(self.session_mgr.banned_ips))
-        self.logger.info("Got IP: {}".format(ipaddr))
         if ipaddr in self.session_mgr.banned_ips:
             self.logger.info("IP Address {} is banned, aborting connection".format(str(ipaddr)))
             self.abort()
