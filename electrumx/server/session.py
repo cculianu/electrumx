@@ -381,8 +381,10 @@ class SessionManager(object):
                     ret += f"disconnected session {session.session_id};"
         for peer in self.peer_mgr.peers.copy():
             peer_ipaddr = peer.ip_addr
+            self.logger.info("peer {peer} ipaddr: {peer_ipaddr}")
             if peer_ipaddr == ipaddr:
                 ret += f'dropping peer {peer_ipaddr};'
+                peer.mark_bad()
                 peer.retry_event.set() # force it to wake up and drop itself
         # ---
         return ret + f'banned {ip}'
