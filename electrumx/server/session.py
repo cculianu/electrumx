@@ -374,6 +374,7 @@ class SessionManager(object):
                     continue  # Hmm.. this shouldn't really happen.
                 if ipa == ipaddr:
                     # match, disconnect
+                    self.logger.info(f"Disconnecting {session.session_id} {ipa}")
                     await session.close(force_after=1)
                     ret += f"disconnected session {session.session_id};"
         # ---
@@ -694,13 +695,14 @@ class SessionBase(RPCSession):
     def _abort_if_banned(self):
         pa = self.peer_address()
         if not pa:
-            self.logger.error(f'could not determine peer IP address! FIXME!')
+            self.logger.error('could not determine peer IP address! FIXME!')
         else:
             try:
                 ipaddr = ip_address(pa[0])
             except ValueError:
                 self.logger.error("Could not parse IP: {}".format(pa[0]))
                 return
+            self.logger.info("Banned IPs: {}", self.session_mgr.banned_ips)
             if ipaddr in self.session_mgr.banned_ips:
                 self.logger.info("IP Address {} is banned, aborting connection".format(str(ipaddr)))
                 self.abort()
