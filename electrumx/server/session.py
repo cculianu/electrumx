@@ -355,25 +355,13 @@ class SessionManager(object):
         self.hsub_results = (electrum, {'hex': raw.hex(), 'height': height})
         self.notified_height = height
 
-    # --- LocalRPC command handlers
-    async def rpc_banip(self, ip):
-        ''' Ban an ip address, disconnecting any sessions or peers associated
-        with that address and preventing future connections. '''
-        try:
-            ipaddr = ip_address(ip)
-        except ValueError:
-            return "invalid ip"
-        self.banned_ips[ipaddr] = time.time()
-        # --- disconnect all sessions matching IP
+    async def _kill_all_for_ip(self, ipaddr):
+        ''' Disconnects all sessions and drop all peers for a given ip address
+        (ipaddr is a Python ip_address object) '''
         ret = ''
         for session in self.sessions.copy():
-            pa = session.peer_address()
-            if pa:
-                try:
-                    ipa = ip_address(pa[0])
-                except ValueError:
-                    self.logger.error("Could not parse IP: {}".format(pa[0]))
-                    continue  # Hmm.. this shouldn't really happen.
+            ipa = session.peer_ip_address()
+            if ipa:
                 if ipa == ipaddr:
                     # match, disconnect
                     self.logger.info(f"Disconnecting {session.session_id} {ipa}")
@@ -389,6 +377,19 @@ class SessionManager(object):
                 ret += f'dropping peer {peer_ipaddr};'
                 peer.mark_bad()
                 peer.retry_event.set() # force it to wake up and drop itself
+        return ret
+
+    # --- LocalRPC command handlers
+    async def rpc_banip(self, ip):
+        ''' Ban an ip address, disconnecting any sessions or peers associated
+        with that address and preventing future connections. '''
+        try:
+            ipaddr = ip_address(ip)
+        except ValueError:
+            return "invalid ip"
+        self.banned_ips[ipaddr] = time.time()
+        # --- disconnect all sessions matching IP
+        ret = await self._kill_all_for_ip(ipaddr)
         # ---
         return ret + f'banned {ip}'
 
