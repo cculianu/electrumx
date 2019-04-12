@@ -75,6 +75,12 @@ class Env(EnvBase):
         self.bandwidth_limit = self.integer('BANDWIDTH_LIMIT', 2000000)
         self.session_timeout = self.integer('SESSION_TIMEOUT', 600)
         self.drop_client = self.custom("DROP_CLIENT", None, re.compile)
+        # Blacklist URL. Set this to the empty string in the environment if you want to disable this facility
+        self.blacklist_url = self.default('BLACKLIST_URL',
+                                          'https://www.c3-soft.com/downloads/BitcoinCash/Electron-Cash/blacklist.json'
+                                          )
+        # If this is set, then we ban whenever an IP address has more than self.max_sessions_per_ip connections
+        self.ban_excessive_connections = self.boolean('BAN_EXCESSIVE_CONNECTIONS', True)
 
         # Identities
         clearnet_identity = self.clearnet_identity()

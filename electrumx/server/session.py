@@ -139,6 +139,7 @@ class SessionManager(object):
         self.session_event = Event()
         # banned ip_address instances -> time of ban
         self.banned_ips = defaultdict(time.time)
+        self.ban_queue = set()
         self.ip_session_totals = defaultdict(int)
         self.max_sessions_per_ip = env.max_sessions_per_ip
 
@@ -211,6 +212,15 @@ class SessionManager(object):
                 self.logger.info('resuming listening for incoming connections')
                 await self._start_external_servers()
                 paused = False
+            if self.ban_queue:
+                q = self.ban_queue.copy()
+                self.ban_queue.clear()
+                n = 0
+                for ip in q:
+                    self.banned_ips[ip] = time.time()
+                    await self._kill_all_for_ip(ip)
+                    n += 1
+                self.logger.info(f'banned {n} IPs for abuse')
 
     async def _log_sessions(self):
         '''Periodically log sessions.'''
@@ -395,7 +405,7 @@ class SessionManager(object):
     async def _download_blacklist(self):
         ''' Downloads the blacklist.json file form the blacklist URL every 5
         minutes. '''
-        URL = 'https://www.c3-soft.com/downloads/BitcoinCash/Electron-Cash/blacklist.json'
+        URL = self.env.blacklist_url
         class BadResponse(Exception):
             pass
         async def fetch(client):
@@ -697,7 +707,10 @@ class SessionManager(object):
         ipaddr = session.peer_ip_address()
         if ipaddr in self.banned_ips:
             return False, f'IP {ipaddr} is banned'
-        if self.ip_session_totals[ipaddr] >= self.max_sessions_per_ip:
+        if ipaddr and self.ip_session_totals[ipaddr] >= self.max_sessions_per_ip:
+            if self.env.ban_excessive_connections:
+                self.ban_queue.add(ipaddr)
+                self.session_event.set()
             return False, f'IP {ipaddr} has reached max_session_per_ip ({self.max_sessions_per_ip})'
         return True, ''
 
