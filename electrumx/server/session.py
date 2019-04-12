@@ -380,7 +380,7 @@ class SessionManager(object):
                     await session.close(force_after=1)
                     ret += f"disconnected session {session.session_id};"
         for peer in self.peer_mgr.peers.copy():
-            peer_ipaddr = peer.ip_addr
+            peer_ipaddr = ip_address(peer.ip_addr)
             self.logger.info(f"peer {peer} ipaddr: {peer_ipaddr}")
             if peer_ipaddr == ipaddr:
                 ret += f'dropping peer {peer_ipaddr};'
