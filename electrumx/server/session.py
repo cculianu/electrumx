@@ -215,12 +215,10 @@ class SessionManager(object):
             if self.ban_queue:
                 q = self.ban_queue.copy()
                 self.ban_queue.clear()
-                n = 0
                 for ip in q:
                     self.banned_ips[ip] = time.time()
+                    self.logger.info(f'banning {ip} for abuse')
                     await self._kill_all_for_ip(ip)
-                    n += 1
-                self.logger.info(f'banned {n} IPs for abuse')
 
     async def _log_sessions(self):
         '''Periodically log sessions.'''
@@ -708,7 +706,7 @@ class SessionManager(object):
         if ipaddr in self.banned_ips:
             return False, f'IP {ipaddr} is banned'
         if ipaddr and self.ip_session_totals[ipaddr] >= self.max_sessions_per_ip:
-            if self.env.ban_excessive_connections:
+            if self.env.ban_excessive_connections and not session.is_tor():
                 self.ban_queue.add(ipaddr)
                 self.session_event.set()
             return False, f'IP {ipaddr} has reached max_session_per_ip ({self.max_sessions_per_ip})'
@@ -870,6 +868,9 @@ class SessionBase(RPCSession):
         coro = handler_invocation(handler, request)()
         return await coro
 
+    def is_tor(self):
+        ''' Subclasses should override this '''
+        return False
 
 class ElectrumX(SessionBase):
     '''A TCP server that handles incoming Electrum connections.'''
