@@ -621,9 +621,11 @@ class SessionManager(object):
         ''' Checks the ban list and also the max_sessions_per_ip, and returns
         True if ok, False if limit reached or banned. '''
         ipaddr = session.peer_ip_address()
-        if ipaddr not in self.banned_ips and self.ip_session_totals[ipaddr] < self.max_sessions_per_ip:
-            return True
-        return False
+        if ipaddr in self.banned_ips:
+            False, f'IP {ipaddr} is banned'
+        if self.ip_session_totals[ipaddr] < self.max_sessions_per_ip:
+            return False, f'IP {ipaddr} has reached max_session_per_ip ({self.max_session_per_ip})'
+        return True, ''
 
     def add_session(self, session):
         self.sessions.add(session)
@@ -716,8 +718,9 @@ class SessionBase(RPCSession):
         return status
 
     def _abort_if_not_allowed(self):
-        if not self.session_mgr.can_add_session(self):
-            self.logger.info(f'IP Address {self.peer_ip_address()} is either banned or has reached max sessions per IP, aborting connection!')
+        ok, reason = self.session_mgr.can_add_session(self)
+        if not ok:
+            self.logger.info(f'{reason}; aborting connection')
             self.abort()
             return True
 
