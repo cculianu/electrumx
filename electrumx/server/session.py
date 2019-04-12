@@ -8,6 +8,7 @@
 '''Classes for local RPC server and remote client TCP/SSL servers.'''
 
 import asyncio
+import aiohttp
 import codecs
 import datetime
 import itertools
@@ -379,6 +380,57 @@ class SessionManager(object):
                 peer.retry_event.set() # force it to wake up and drop itself
         return ret
 
+    async def _got_new_blacklist(self, bl):
+        for ip in bl:
+            try:
+                ipaddr = ip_address(ip)
+                self.logger.info(f"Got blacklist IP {ipaddr}!")
+            except ValueError as e:
+                self.logger.error(f"Could not parse IP {ip}: ({e})")
+                continue
+
+    async def _download_blacklist(self):
+        ''' Downloads the blacklist.json file form the blacklist URL every 5
+        minutes. '''
+        URL = 'https://www.c3-soft.com/downloads/BitcoinCash/Electron-Cash/blacklist.json'
+        class BadResponse(Exception):
+            pass
+        async def fetch(client):
+            async with client.get(URL) as resp:
+                if resp.status == 200:
+                    return await resp.text()
+                raise BadResponse(f'Bad Response: {resp.status}')
+
+        last_blacklist = None
+        sleeptime = 60.0*5  # 5 mins
+        while True:
+            t0  = time.time()
+            try:
+                async with aiohttp.ClientSession(timeout=20.0) as client:
+                    text = await fetch(client)
+                    blacklist = json.loads(text)
+                    if not isinstance(blacklist, dict):
+                        self.logger.error(f"Blacklist was not a dict!")
+                    else:
+                        bl = blacklist.get('blacklist-ips', [])
+                        if isinstance(bl, list):
+                            bl = set(bl)
+                            if bl != last_blacklist:
+                                await self._got_new_blacklist(bl)
+                            else:
+                                self.logger.info("Blacklist unchanged...")
+                            last_blacklist = bl
+                        if last_blacklist is None:
+                            self.logger.error("No blacklist found.. will try later.")
+            except (aiohttp.ClientError, BadResponse) as e:
+                self.logger.error(f"Error downloading blacklist: {e}")
+            except json.decoder.JSONDecodeError as e:
+                self.logger.error(f"Error decoding blacklist: {e}")
+            time_to_sleep = max(0, sleeptime - (time.time()-t0))
+            self.logger.info(f"[DL BL] sleeping {time_to_sleep} secs...")
+            await sleep(time_to_sleep)
+
+
     # --- LocalRPC command handlers
     async def rpc_banip(self, ip):
         ''' Ban an ip address, disconnecting any sessions or peers associated
@@ -409,7 +461,7 @@ class SessionManager(object):
         ''' List banned ip addresses. '''
         now = time.time()
         return { 'banned-ips' : {str(ip) : now-when for ip, when in self.banned_ips.copy().items() },
-                 'banned-hostname-globs' : {} }
+                }
 
     async def rpc_add_peer(self, real_name):
         '''Add a peer.
@@ -568,6 +620,7 @@ class SessionManager(object):
                 await group.spawn(self._clear_stale_sessions())
                 await group.spawn(self._log_sessions())
                 await group.spawn(self._manage_servers())
+                await group.spawn(self._download_blacklist())
         finally:
             # Close servers and sessions
             await self._close_servers(list(self.servers.keys()))
