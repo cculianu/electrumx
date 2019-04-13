@@ -214,9 +214,12 @@ These environment variables are optional:
   community to provide a convenient list of currently-active phisher/sybil
   nodes.  This mechanism has been added in April 2019 due to excessive phishing
   and sybil attacks on the Bitcoin Cash ElectrumX/ElectronX network.  This file
-  contains a list of IP addresses to auto-ban at startup.  The file is refreshed
-  from the server every 5 minutes and any new entries are added to the ban list
-  and old entries no longer in the file are removed from the ban list.
+  contains a list of IP addresses (and hostname globs) to auto-ban at startup.
+  The file is refreshed from the server every 5 minutes (configurable via the
+  :envvar:`BLACKLIST_POLL_INTERVAL` variable) and any new entries are added to
+  the ban list and old entries no longer in the file are removed from the ban
+  list.  Care has been taken so that this file's ban lists do not conflict
+  with whatever you specify via the rpc 'banip' or 'banhost' commands.
   Set this to the empty string `""` to disable this feature. Defaults to:
   `https://www.c3-soft.com/downloads/BitcoinCash/Electron-Cash/blacklist.json`.
 
