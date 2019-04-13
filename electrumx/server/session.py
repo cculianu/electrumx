@@ -828,7 +828,7 @@ class SessionBase(RPCSession):
         if cannot parse '''
         pa = self.peer_address()
         if not pa:
-            self.logger.error(f'NO IP address for {self}! FIXME!')
+            self.logger.error(f'NO IP address for {self}')
             return None
         try:
             return ip_address(pa[0])
