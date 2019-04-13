@@ -422,7 +422,7 @@ class SessionManager(object):
         for h in bl:
             h = self._normalize_ban_host(h)
             if h not in self.banned_hostname_suffixes and h and '*' not in h:
-                self.logger.info(f"Got new blacklist host *{h} from blacklist.json")
+                self.logger.info(f"Got new blacklist host '*{h}'")
                 self.banned_hostname_suffixes[h] = 'blacklist'
                 await self._kill_all_peers_with_suffix(h)
 
@@ -443,7 +443,7 @@ class SessionManager(object):
             try:
                 ipaddr = ip_address(ip)
                 if ipaddr not in self.banned_ips:
-                    self.logger.info(f"Got new blacklist IP {ipaddr} from blacklist.json (banning and kicking)...")
+                    self.logger.info(f"Got new blacklist IP {ipaddr}")
                     self.banned_ips[ipaddr] = 'blacklist'
                     await self._kill_all_for_ip(ipaddr)
             except ValueError as e:
