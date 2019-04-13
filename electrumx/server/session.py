@@ -491,7 +491,7 @@ class SessionManager(object):
         As such, banning by IP is far more effective. '''
         host = self._normalize_ban_host(host)
         if '*' in host or not host:
-            return 'Invalid hostname glob. Specify *.foo.bar or foo.bar.baz.'
+            return 'Invalid hostname glob. Specify *.foo.bar or baz.foo.bar'
         self.banned_hostname_suffixes[host] = 'rpc_banhost'
         # disconnect all peers...
         # TODO
