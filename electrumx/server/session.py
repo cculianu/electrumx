@@ -900,6 +900,7 @@ class SessionBase(RPCSession):
         ''' Subclasses should override this '''
         return False
 
+
 class ElectrumX(SessionBase):
     '''A TCP server that handles incoming Electrum connections.'''
 
@@ -1486,6 +1487,11 @@ class ElectrumX(SessionBase):
         self.request_handlers = handlers
 
 
+class ElectronX(ElectrumX):
+    ''' Added so that the logs show ElectronX for Bitcoin Cash '''
+    pass
+
+
 class LocalRPC(SessionBase):
     '''A local TCP RPC server session.'''
 
@@ -1711,9 +1717,6 @@ class SmartCashElectrumX(DashElectrumX):
             return result
         return None
 
-class ElectronX(ElectrumX):
-    ''' Added so that the logs show ElectronX for Bitcoin Cash '''
-    pass
 
 class AuxPoWElectrumX(ElectrumX):
     async def block_header(self, height, cp_height=0):
