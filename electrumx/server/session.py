@@ -413,7 +413,7 @@ class SessionManager(object):
                 continue
 
     async def _download_blacklist(self):
-        ''' Downloads the blacklist.json file form the blacklist URL every 5
+        ''' Downloads the blacklist.json file from the blacklist URL every 5
         minutes. '''
         URL = self.env.blacklist_url
         if not URL:
@@ -483,11 +483,11 @@ class SessionManager(object):
         try:
             ipaddr = ip_address(ip)
         except ValueError:
-            return "invalid ip"
+            return "invalid IP"
         self.banned_ips[ipaddr] = 'rpc_banip'
-        # --- disconnect all sessions matching IP
+        # disconnect all sessions matching IP
         ret = await self._kill_all_for_ip(ipaddr)
-        # ---
+        #
         return ret + f'banned {ip}'
 
     async def rpc_unbanip(self, ip):
