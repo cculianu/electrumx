@@ -303,7 +303,7 @@ raise them.
   Bandwidth usage is gradually reduced over time by "refunding" a
   proportional part of the limit every now and then.
 
-  Note from ElectronX maintainers: Despite what the above paragraph claims,
+  Note from ElectronX maintainers: Despite what the above paragraphs claim,
   there is nothing in the codebase for rate-limiting abusive clients via
   sleep calls or any such thing.
 
