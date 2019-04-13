@@ -220,6 +220,13 @@ These environment variables are optional:
   Set this to the empty string `""` to disable this feature. Defaults to:
   `https://www.c3-soft.com/downloads/BitcoinCash/Electron-Cash/blacklist.json`.
 
+.. envvar:: BLACKLIST_POLL_INTERVAL
+
+  The amount of time in seconds to poll BLACKLIST_URL (if non-empty string)
+  for the blacklist.json file.  Defaults to 300 seconds (5 minutes).  Setting
+  this value below 30 seconds or to a nonsensical value will result in it being
+  set to the default (300 seconds).
+
 
 Resource Usage Limits
 =====================

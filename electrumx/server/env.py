@@ -79,6 +79,9 @@ class Env(EnvBase):
         self.blacklist_url = self.default('BLACKLIST_URL',
                                           'https://www.c3-soft.com/downloads/BitcoinCash/Electron-Cash/blacklist.json'
                                           )
+        self.blacklist_poll_interval = self.custom('BLACKLIST_POLL_INTERVAL', 300,
+                                                   # parse as integer and limit it to >= 30 secs and <= 86400 (1 day)
+                                                   lambda x: (int(x) >= 30 and int(x) <= 86400 and int(x)) or 300)
         # If this is set, then we ban whenever an IP address has more than self.max_sessions_per_ip connections
         self.ban_excessive_connections = self.boolean('BAN_EXCESSIVE_CONNECTIONS', True)
 

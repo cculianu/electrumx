@@ -415,10 +415,12 @@ class SessionManager(object):
     async def _download_blacklist(self):
         ''' Downloads the blacklist.json file from the blacklist URL every 5
         minutes. '''
-        URL = self.env.blacklist_url
+        URL = self.env.blacklist_url.strip()
+        sleeptime = self.env.blacklist_poll_interval
         if not URL:
             self.logger.info("Blacklist download disabled")
             return
+        self.logger.info(f"Blacklist will be downloaded every {sleeptime:0.2f} secs from URL: {URL}")
         class BadResponse(Exception):
             pass
         async def fetch(client):
@@ -438,8 +440,7 @@ class SessionManager(object):
             return ret
 
         last_blacklist = None
-        sleeptime = 60.0*5  # 5 mins
-        sleeptime_err = 30.0
+        sleeptime_err = 30.0  # Hard coded -- sleep for 30 seconds on error and try again.
         while True:
             t0  = time.time()
             err = True
