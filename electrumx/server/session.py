@@ -411,6 +411,8 @@ class SessionManager(object):
         return ret
 
     async def _got_new_blacklist_hosts(self, last_blacklist, bl):
+        ''' param: last_blacklist should be a set or None
+            param: bl should always be a set of string hostname suffixes '''
         if isinstance(last_blacklist, set):
             no_longer_blacklisted = last_blacklist - bl
             rmct = 0
@@ -427,6 +429,8 @@ class SessionManager(object):
                 await self._kill_all_peers_with_suffix(h)
 
     async def _got_new_blacklist(self, last_blacklist, bl):
+        ''' param: last_blacklist should be a set or None
+            param: bl should always be a set of string IP addresses '''
         if isinstance(last_blacklist, set):
             no_longer_blacklisted = last_blacklist - bl
             rmct = 0
