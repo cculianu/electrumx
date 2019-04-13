@@ -302,6 +302,9 @@ class PeerManager(object):
                 dupes = self._dupes_for_peer(peer.ip_addr)
                 if dupes:
                     raise DupePeer(f'Peer {peer} is a dupe! {len(dupes)} other peers with IP {peer.ip_addr} were found!')
+        banned_suffix = self.session_mgr.does_peer_match_hostname_ban(peer)
+        if banned_suffix:
+            raise BannedPeer(f'Peer matches banned hostname suffix {banned_suffix}')
 
         # server.version goes first
         message = 'server.version'
@@ -475,6 +478,11 @@ class PeerManager(object):
                 if permit:
                     permit = not any(self._dupes_for_peer(info[-1][0]) for info in infos)
                     reason = 'dupe peer'
+                if permit:
+                    notok = self.session_mgr.does_peer_match_hostname_ban(peer)
+                    if notok:
+                        permit = False
+                        reason = f'banned hostname suffix: {notok}'
 
         if permit:
             self.logger.info(f'accepted add_peer request from {source} '

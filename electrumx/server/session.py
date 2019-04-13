@@ -390,6 +390,42 @@ class SessionManager(object):
                 peer.retry_event.set() # force it to wake up and drop itself
         return ret
 
+    def does_peer_match_hostname_ban(self, peer, suffix=None):
+        host = (peer.host and peer.host.strip().lower()) or ''
+        if suffix is not None and suffix:
+            return (host.endswith(suffix) and ('*' + suffix)) or ''  # We always return a string from this function
+        elif suffix is None:  # Check for None so that '' never matches
+            for suffix in self.banned_hostname_suffixes.copy():
+                if (suffix  # defensive programming: prevent trivial empty string matches
+                        and host.endswith(suffix)):
+                    return ('*' + suffix)
+        return ''  # False/No match  We always return a string from this function
+
+    async def _kill_all_peers_with_suffix(self, suffix):
+        ret = ''
+        for peer in self.peer_mgr.peers.copy():
+            if self.does_peer_match_hostname_ban(peer, suffix):
+                ret += f'dropping peer {peer};'
+                peer.mark_bad()
+                peer.retry_event.set() # force it to wake up and drop itself
+        return ret
+
+    async def _got_new_blacklist_hosts(self, last_blacklist, bl):
+        if isinstance(last_blacklist, set):
+            no_longer_blacklisted = last_blacklist - bl
+            rmct = 0
+            for h in no_longer_blacklisted:
+                h = self._normalize_ban_host(h)
+                rmct += int(self.banned_hostname_suffixes.pop(h, None) is not None)
+            if rmct:
+                self.logger.info(f"{rmct} hosts removed from blacklist")
+        for h in bl:
+            h = self._normalize_ban_host(h)
+            if h not in self.banned_hostname_suffixes and h and '*' not in h:
+                self.logger.info(f"Got new blacklist host *{h} from blacklist.json")
+                self.banned_hostname_suffixes[h] = 'blacklist'
+                await self._kill_all_peers_with_suffix(h)
+
     async def _got_new_blacklist(self, last_blacklist, bl):
         if isinstance(last_blacklist, set):
             no_longer_blacklisted = last_blacklist - bl
@@ -431,17 +467,27 @@ class SessionManager(object):
                     return await resp.text()
                 raise BadResponse(f'Bad Response: {resp.status}')
         def convert_from_electrumx_blacklist(bl):
-            ret = []
+            ret = {
+                'blacklist-ips' : [],
+                'blacklist-hosts' : [],
+            }
             for thing in bl:
                 try:
                     ip = ip_address(thing)
-                    ret.append(str(ip))
+                    ret['blacklist-ips'].append(str(ip))
+                    continue
                 except ValueError:
-                    # was a *.domain.tld style.. ignore
+                    # was a *.domain.tld style..
                     pass
+                h = self._normalize_ban_host(thing)
+                if h and '*' not in h:
+                    ret['blacklist-hosts'].append(h)
+            if not any(len(ret[k]) for k in ret):
+                # Hmm.. failed to parse any IPs and ANY hosts. Must be a bad file format.. or something!
+                return None
             return ret
 
-        last_blacklist = None
+        last_blacklist, last_blacklist_hosts = None, None
         sleeptime_err = 30.0  # Hard coded -- sleep for 30 seconds on error and try again.
         while True:
             t0  = time.time()
@@ -450,23 +496,33 @@ class SessionManager(object):
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30.0)) as client:
                     text = await fetch(client)
                 blacklist = json.loads(text)
-                bl = None
+                bl, blh = None, None
+                if isinstance(blacklist, list):
+                    # convert from electrumx format (flat list with everything mixed-in)
+                    blacklist = convert_from_electrumx_blacklist(blacklist)
+                    if blacklist:
+                        self.logger.info(f"Blacklist was in ElectrumX format; imported {len(blacklist['blacklist-ips'])} IPs, {len(blacklist['blacklist-hosts'])} hosts")
                 if isinstance(blacklist, dict):
                     bl = blacklist.get('blacklist-ips', None)
+                    blh = blacklist.get('blacklist-hosts', None)
                 else:
-                    self.logger.error(f"Blacklist was not a dict!")
-                    if isinstance(blacklist, list):
-                        bl = convert_from_electrumx_blacklist(blacklist)
-                        if bl:
-                            self.logger.info(f"Blacklist was in ElectrumX format; imported {len(bl)} IPs")
+                    self.logger.error("Blacklist file has an unrecognized format!")
                 if isinstance(bl, list):
                     err = False
                     bl = set(bl)
                     if bl != last_blacklist:
                         await self._got_new_blacklist(last_blacklist, bl)
                     else:
-                        self.logger.info("Blacklist unchanged...")
+                        self.logger.info("Blacklist IPs unchanged...")
                     last_blacklist = bl
+                if isinstance(blh, list):
+                    err = False
+                    blh = set(blh)
+                    if blh != last_blacklist_hosts:
+                        await self._got_new_blacklist_hosts(last_blacklist_hosts, blh)
+                    else:
+                        self.logger.info("Blacklist hosts unchanged...")
+                    last_blacklist_hosts = blh
             except (aiohttp.ClientError, BadResponse) as e:
                 self.logger.error(f"Error downloading blacklist: {repr(e)}")
             except json.decoder.JSONDecodeError as e:
@@ -494,8 +550,7 @@ class SessionManager(object):
             return 'Invalid hostname glob. Specify *.foo.bar or baz.foo.bar'
         self.banned_hostname_suffixes[host] = 'rpc_banhost'
         # disconnect all peers...
-        # TODO
-        ret = ''
+        ret = await self._kill_all_peers_with_suffix(host)
         #
         return ret + f'banned peers matching suffix: {host}'
 
