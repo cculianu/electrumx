@@ -426,6 +426,16 @@ class SessionManager(object):
                 if resp.status == 200:
                     return await resp.text()
                 raise BadResponse(f'Bad Response: {resp.status}')
+        def convert_from_electrumx_blacklist(bl):
+            ret = []
+            for thing in bl:
+                try:
+                    ip = ip_address(thing)
+                    ret.append(str(ip))
+                except ValueError:
+                    # was a *.domain.tld style.. ignore
+                    pass
+            return ret
 
         last_blacklist = None
         sleeptime = 60.0*5  # 5 mins
@@ -437,20 +447,23 @@ class SessionManager(object):
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30.0)) as client:
                     text = await fetch(client)
                 blacklist = json.loads(text)
-                if not isinstance(blacklist, dict):
-                    self.logger.error(f"Blacklist was not a dict!")
+                bl = None
+                if isinstance(blacklist, dict):
+                    bl = blacklist.get('blacklist-ips', None)
                 else:
-                    bl = blacklist.get('blacklist-ips', [])
-                    if isinstance(bl, list):
-                        err = False
-                        bl = set(bl)
-                        if bl != last_blacklist:
-                            await self._got_new_blacklist(last_blacklist, bl)
-                        else:
-                            self.logger.info("Blacklist unchanged...")
-                        last_blacklist = bl
-                    if last_blacklist is None:
-                        self.logger.error("No blacklist found.. will try later.")
+                    self.logger.error(f"Blacklist was not a dict!")
+                    if isinstance(blacklist, list):
+                        bl = convert_from_electrumx_blacklist(blacklist)
+                        if bl:
+                            self.logger.info(f"Blacklist was in ElectrumX format; imported {len(bl)} IPs")
+                if isinstance(bl, list):
+                    err = False
+                    bl = set(bl)
+                    if bl != last_blacklist:
+                        await self._got_new_blacklist(last_blacklist, bl)
+                    else:
+                        self.logger.info("Blacklist unchanged...")
+                    last_blacklist = bl
             except (aiohttp.ClientError, BadResponse) as e:
                 self.logger.error(f"Error downloading blacklist: {repr(e)}")
             except json.decoder.JSONDecodeError as e:
