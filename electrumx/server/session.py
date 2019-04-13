@@ -1484,12 +1484,10 @@ class ElectrumX(SessionBase):
         block_hash is a hexadecimal string, and tx_hashes is an
         ordered list of hexadecimal strings.
         '''
-        t0 = time.time()
         height = non_negative_integer(height)
         try:
             block_hash = hash_to_hex_str((await self.db.fs_block_hashes(height, 1))[0])
             tx_hashes = await self.db.tx_hashes_at_blockheight(height)
-            self.logger.info(f"DEBUG: SUCCESS! Got tx hashes: {tx_hashes} in {time.time()-t0:.1f} secs")
         except self.db.DBError as e:
             raise RPCError(BAD_REQUEST, f'db error: {e!r}')
         tx_hashes = [hash_to_hex_str(hash) for hash in tx_hashes]
