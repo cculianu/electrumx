@@ -150,7 +150,7 @@ listbanned
 Return the current ban table(s). Takes no arguments.  Note that by default
 the ban table is populated with entries from the blacklist.json file downloaded
 via :envvar:`BLACKLIST_URL`. The ban table can also be edited using the
-`banip`_ command.
+`banip`_ and `banhost`_ commands.
 
 log
 ---
