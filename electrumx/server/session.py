@@ -495,6 +495,7 @@ class SessionManager(object):
         self.banned_hostname_suffixes[host] = 'rpc_banhost'
         # disconnect all peers...
         # TODO
+        ret = ''
         #
         return ret + f'banned peers matching suffix: {host}'
 
