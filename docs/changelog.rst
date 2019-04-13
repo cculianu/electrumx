@@ -15,7 +15,8 @@
    community-maintained blacklist.json file as well as manual banning
    to supplement that via the banip command. We also have slightly more
    generous limits to things like MAX_SEND and MAX_SUBS than the defaults
-   of ElectrumX.
+   of ElectrumX.  We also don't implement their newest cost control logic which
+   we feel is too restrictive for normal BCH usage of the server.
 
 
 Version 1.10.0 (14 April 2019)
