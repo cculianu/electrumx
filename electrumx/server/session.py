@@ -1711,6 +1711,9 @@ class SmartCashElectrumX(DashElectrumX):
             return result
         return None
 
+class ElectronX(ElectrumX):
+    ''' Added so that the logs show ElectronX for Bitcoin Cash '''
+    pass
 
 class AuxPoWElectrumX(ElectrumX):
     async def block_header(self, height, cp_height=0):
