@@ -139,13 +139,15 @@ class SessionManager(object):
         self.session_event = Event()
         # banned ip_address instances -> 'reason'
         self.banned_ips = defaultdict(str)
+        self.banned_hostname_suffixes = defaultdict(str)
         self.ban_queue = set()
         self.ip_session_totals = defaultdict(int)
         self.max_sessions_per_ip = env.max_sessions_per_ip
 
         # Set up the RPC request handlers
-        cmds = ('add_peer banip daemon_url disconnect getinfo groups listbanned log peers '
-                'query reorg sessions stop unbanip'.split())
+        cmds = ('add_peer banhost banip daemon_url disconnect getinfo groups '
+                'listbanned log peers query reorg sessions stop '
+                'unbanhost unbanip'.split())
         LocalRPC.request_handlers = {cmd: getattr(self, 'rpc_' + cmd)
                                      for cmd in cmds}
 
@@ -476,8 +478,26 @@ class SessionManager(object):
             self.logger.info(f"[Blacklist DL] will try again in {time_to_sleep:0.2f} secs")
             await sleep(time_to_sleep)
 
+    def _normalize_ban_host(self, h):
+        h = h.lower()
+        while h.startswith('*') or h.startswith('.'):
+            h = h[1:]
+        return h
 
     # --- LocalRPC command handlers
+    async def rpc_banhost(self, host):
+        ''' Ban a hostname, or *.hostdomain.tld glob. Note this usage only
+        bans server peers and not any clients that happen to match said host.
+        As such, banning by IP is far more effective. '''
+        host = self._normalize_ban_host(host)
+        if '*' in host or not host:
+            return 'Invalid hostname glob. Specify *.foo.bar or foo.bar.baz.'
+        self.banned_hostname_suffixes[host] = 'rpc_banhost'
+        # disconnect all peers...
+        # TODO
+        #
+        return ret + f'banned peers matching suffix: {host}'
+
     async def rpc_banip(self, ip):
         ''' Ban an ip address, disconnecting any sessions or peers associated
         with that address and preventing future connections. '''
@@ -490,6 +510,15 @@ class SessionManager(object):
         ret = await self._kill_all_for_ip(ipaddr)
         #
         return ret + f'banned {ip}'
+
+    async def rpc_unbanhost(self, host):
+        ''' Unban a host.  Inverse of rpc_banhost. '''
+        host = self._normalize_ban_host(host)
+        if host in self.banned_hostname_suffixes:
+            self.banned_hostname_suffixes.pop(host, None)
+            return f'unbanned peers matching suffix: {host}'
+        else:
+            return f'{host} was not in ban list'
 
     async def rpc_unbanip(self, ip):
         ''' UnBan an ip address. '''
@@ -506,6 +535,7 @@ class SessionManager(object):
     async def rpc_listbanned(self):
         ''' List banned ip addresses. '''
         return { 'banned-ips' : { str(ip) : reason for ip, reason in self.banned_ips.copy().items() },
+                 'banned-hosts' : {'*' + str(suffix) : reaxon for suffix, reason in self.banned_hostname_suffixes.copy().items() },
                 }
 
     async def rpc_add_peer(self, real_name):

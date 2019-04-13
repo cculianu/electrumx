@@ -42,8 +42,16 @@ other_commands = {
             'help': 'e.g. "a.domain.name s995 t"',
         },
     ),
+    'banhost': (
+        'ban an hostname or hostname glob (applied to peers only)',
+        [], {
+            'type': str,
+            'dest': 'host',
+            'help': 'e.g. "*.somedomain.com"',
+        },
+    ),
     'banip': (
-        'ban an ip address (session or peer)',
+        'ban an IP address (session or peer)',
         [], {
             'type': str,
             'dest': 'ip',
@@ -82,8 +90,16 @@ other_commands = {
             'help': 'number of blocks to back up'
         },
     ),
+    'unbanhost': (
+        'un-ban a host in the host banlist (applied to peers only)',
+        [], {
+            'type': str,
+            'dest': 'host',
+            'help': 'e.g. "*.somedomain.com"',
+        },
+    ),
     'unbanip': (
-        'un-ban an ip address (session or peer)',
+        'un-ban an IP address (session or peer)',
         [], {
             'type': str,
             'dest': 'ip',
