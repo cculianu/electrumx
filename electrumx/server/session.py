@@ -536,7 +536,7 @@ class SessionManager(object):
     async def rpc_listbanned(self):
         ''' List banned ip addresses. '''
         return { 'banned-ips' : { str(ip) : reason for ip, reason in self.banned_ips.copy().items() },
-                 'banned-hosts' : {'*' + str(suffix) : reaxon for suffix, reason in self.banned_hostname_suffixes.copy().items() },
+                 'banned-hosts' : {'*' + str(suffix) : reason for suffix, reason in self.banned_hostname_suffixes.copy().items() },
                 }
 
     async def rpc_add_peer(self, real_name):
