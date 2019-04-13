@@ -487,6 +487,20 @@ class SessionManager(object):
                 return None
             return ret
 
+        def maybe_update_from_listbanned_format(d):
+            ''' This is in case the user pointed this server at a .json file
+            that is a copy-pasta from his 'listbanned' rpc output.  As a
+            convenience we support that format and will just mogrify the json
+            that came from that format to what we expect. '''
+            remap = (
+                ('blacklist-ips', 'banned-ips'),
+                ('blacklist-hosts', 'banned-hosts')
+            )
+            for out, inp in remap:
+                if out not in d and isinstance(d.get(inp), dict):
+                    d.update({ out : list( d[inp].keys() ) })  # remap 'banned-X' : { 'IP_OR_HOSTNAME1' : 'reason', ... } to 'blacklist-X' : [ 'IP_OR_HOSTNAME1', 'IP_OR_HOSTNAME2' ... ] (dropping the 'reason')
+                    del d[inp]
+
         last_blacklist, last_blacklist_hosts = None, None
         sleeptime_err = 30.0  # Hard coded -- sleep for 30 seconds on error and try again.
         while True:
@@ -503,6 +517,7 @@ class SessionManager(object):
                     if blacklist:
                         self.logger.info(f"Blacklist was in ElectrumX format; imported {len(blacklist['blacklist-ips'])} IPs, {len(blacklist['blacklist-hosts'])} hosts")
                 if isinstance(blacklist, dict):
+                    maybe_update_from_listbanned_format(blacklist)
                     bl = blacklist.get('blacklist-ips', None)
                     blh = blacklist.get('blacklist-hosts', None)
                 else:
@@ -523,6 +538,8 @@ class SessionManager(object):
                     else:
                         self.logger.info("Blacklist hosts unchanged...")
                     last_blacklist_hosts = blh
+                if err:
+                    self.logger.error("No valid data found in the downloaded blacklist")
             except (aiohttp.ClientError, BadResponse) as e:
                 self.logger.error(f"Error downloading blacklist: {repr(e)}")
             except json.decoder.JSONDecodeError as e:
