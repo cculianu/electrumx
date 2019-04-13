@@ -26,6 +26,16 @@ connection attempt.  This command takes a single argument: the peer's
   $ electrumx_rpc add_peer "ecdsa.net v1.0 s110 t"
   "peer 'ecdsa.net v1.0 s110 t' added"
 
+
+banip
+-----
+
+Ban an IP address.  This immediately disconnects all client sessions and
+removes all peers with the specified IP address::
+
+  $ electrumx_rpc banip 10.10.100.123
+  "disconected session 15;banned 10.10.100.123"
+
 daemon_url
 ----------
 
@@ -120,6 +130,14 @@ groups
 Return a list of all current session groups.  Takes no arguments.
 
 The output is quite similar to the `sessions`_ command.
+
+listbanned
+----------
+
+Return the current ban table(s). Takes no arguments.  Note that by default
+the ban table is populated with entries from the blacklist.json file downloaded
+via :envvar:`BLACKLIST_URL`. The ban table can also be edited using the
+`banip`_ command.
 
 log
 ---
@@ -240,5 +258,13 @@ Flush all cached data to disk and shut down the server cleanly, as if
 sending the `KILL` signal.  Be patient - during initial sync flushing
 all cached data to disk can take several minutes.  This command takes
 no arguments.
+
+unbanip
+-------
+
+UnBan an IP address.  This undoes the effect of the `banip`_ command::
+
+  $ electrumx_rpc unbanip 10.10.100.123
+  "unbanned 10.10.100.123"
 
 .. _session logging:
