@@ -10,7 +10,32 @@
 .. note:: The primary difference between this and the official ElectrumX
    is that this version supports any block ordering (including the lexically-
    ordered blocks that can be created/followed by several Bitcoin Cash node
-   implementations: ABC, BU, XT, bchd, bcash, Bitprim, and others.)
+   implementations: ABC, BU, XT, bchd, bcash, Bitprim, and others.). We also
+   employ a different anti-phishing strategy than they do, based on a
+   community-maintained blacklist.json file as well as manual banning
+   to supplement that via the banip command. We also have slightly more
+   generous limits to things like MAX_SEND and MAX_SUBS than the defaults
+   of ElectrumX.
+
+
+Version 1.10.0 (14 April 2019)
+==============================
+
+* Added banip, unbanip, listbanned rpc commands (cculianu)
+* Disallow multiple servers from same IP to appear in peers (doesn't apply
+  to Tor, however) (cculianu)
+* Limit client connections per IP to 50 by default (MAX_SESSIONS_PER_IP)
+  to prevent the "clients exhausting FDs on server" attack vector.
+  (cculianu)
+* Added blacklist.json mechanism for downloading a community maintained
+  list of bad peers as an anti-phishing, anti-sybil attack measure.
+  Use BLACKLIST_URL="" in env to disable, but it is recommended you leave
+  it enabled. (cculianu)
+* Set MAX_SEND to 4000000 (4MB) by default (was originally 1MB which fails
+  on some BCH wallets). (cculianu)
+* Raised server limit from 250,000 subs to 1,000,000 subs by default
+  (corresponds to env var MAX_SUBS) (cculianu)
+
 
 Version 1.9.4 (7 Feb 2019)
 ============================
