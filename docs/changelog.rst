@@ -22,7 +22,7 @@
 Version 1.10.0 (14 April 2019)
 ==============================
 
-* Added banip, unbanip, listbanned rpc commands (cculianu)
+* Added banip, unbanip, banhost, unbanhost and listbanned rpc commands (cculianu)
 * Disallow multiple servers from same IP to appear in peers (doesn't apply
   to Tor, however) (cculianu)
 * Limit client connections per IP to 50 by default (MAX_SESSIONS_PER_IP)
@@ -31,7 +31,8 @@ Version 1.10.0 (14 April 2019)
 * Added blacklist.json mechanism for downloading a community maintained
   list of bad peers as an anti-phishing, anti-sybil attack measure.
   Use BLACKLIST_URL="" in env to disable, but it is recommended you leave
-  it enabled. (cculianu)
+  it enabled.  We use our own file format for this but the code for this
+  subsystem also understand the ElectrumX 1.10.0 format as well. (cculianu)
 * Set MAX_SEND to 4000000 (4MB) by default (was originally 1MB which fails
   on some BCH wallets). (cculianu)
 * Raised server limit from 250,000 subs to 1,000,000 subs by default

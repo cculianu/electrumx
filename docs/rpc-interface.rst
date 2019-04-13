@@ -26,6 +26,19 @@ connection attempt.  This command takes a single argument: the peer's
   $ electrumx_rpc add_peer "ecdsa.net v1.0 s110 t"
   "peer 'ecdsa.net v1.0 s110 t' added"
 
+banhost
+---------
+
+Ban a hostname suffix.  Banning by hostname only affects peers and does not
+ban any clients that happen to match the hostname (this is because we never
+do reverse-DNS lookups for clients).  Note that if you really want to ban bad
+actors it's recommended you ban by IP which denies the abusers access earlier
+on in the connection life cycle. Banning by hostname is a convenience for
+when scammers or sybil servers all tend to use the same domain names, and you
+want to quickly ban them all. Example usage::
+
+  $ electrumx_rpc banhost '*.scammer.com'
+  "banned peers matching suffix: scammer.com"
 
 banip
 -----
@@ -259,10 +272,18 @@ sending the `KILL` signal.  Be patient - during initial sync flushing
 all cached data to disk can take several minutes.  This command takes
 no arguments.
 
+unbanhost
+---------
+
+Unban a hostname suffix.  This undoes the effect of the `banhost`_ command::
+
+  $ electrumx_rpc unbanhost '*.scammer.com'
+  "unbanned peers matching suffix: scammer.com"
+
 unbanip
 -------
 
-UnBan an IP address.  This undoes the effect of the `banip`_ command::
+Unban an IP address.  This undoes the effect of the `banip`_ command::
 
   $ electrumx_rpc unbanip 10.10.100.123
   "unbanned 10.10.100.123"
