@@ -164,13 +164,15 @@ class PeerManager(object):
                           source=None):
         '''Add a limited number of peers that are not already present.'''
         new_peers = []
+        match_set = self.peers.copy()
         for peer in peers:
             if not peer.is_public or (peer.is_tor and not self.proxy):
                 continue
 
-            matches = peer.matches(self.peers)
+            matches = peer.matches(match_set)
             if not matches:
                 new_peers.append(peer)
+                match_set.add(peer)
             elif check_ports:
                 for match in matches:
                     if match.check_ports(peer):
