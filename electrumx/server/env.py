@@ -72,7 +72,7 @@ class Env(EnvBase):
         self.max_sessions = self.sane_max_sessions()
         self.max_sessions_per_ip = self.integer('MAX_SESSIONS_PER_IP', 50)
         self.max_session_subs = self.integer('MAX_SESSION_SUBS', 50000)
-        self.bandwidth_limit = self.integer('BANDWIDTH_LIMIT', 2000000)
+        self.bandwidth_limit = self.integer('BANDWIDTH_LIMIT', 4000000)
         self.session_timeout = self.integer('SESSION_TIMEOUT', 600)
         self.drop_client = self.custom("DROP_CLIENT", None, re.compile)
         # Blacklist URL. Set this to the empty string in the environment if you want to disable this facility

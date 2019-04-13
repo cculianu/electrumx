@@ -35,6 +35,11 @@ Version 1.10.0 (14 April 2019)
   on some BCH wallets). (cculianu)
 * Raised server limit from 250,000 subs to 1,000,000 subs by default
   (corresponds to env var MAX_SUBS) (cculianu)
+* Raised default BANDWIDTH_LIMIT from 2MB to 4MB (4000000 bytes).  This is
+  because very busy BCH wallets with huge histories would need a higher limit.
+  Note the limit is a soft limit in bytes per hour, and it is not catastrophic
+  to send a client 4MB in 1 hour.  After the limit is reached delays are
+  introduced in server-client communications, as before. (cculianu)
 
 
 Version 1.9.4 (7 Feb 2019)

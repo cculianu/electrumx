@@ -289,7 +289,7 @@ raise them.
 
   Per-session periodic bandwidth usage limit in bytes.  This is a soft,
   not hard, limit.  Currently the period is hard-coded to be one hour.
-  The default limit value is 2 million bytes.
+  The default limit value is 4 million bytes.
 
   Bandwidth usage over each period is totalled, and when this limit is
   exceeded each subsequent request is stalled by sleeping before
