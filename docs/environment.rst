@@ -289,7 +289,7 @@ raise them.
 
   Per-session periodic bandwidth usage limit in bytes.  This is a soft,
   not hard, limit.  Currently the period is hard-coded to be one hour.
-  The default limit value is 4 million bytes.
+  The default limit value is 8 million bytes.
 
   Bandwidth usage over each period is totalled, and when this limit is
   exceeded each subsequent request is stalled by sleeping before
@@ -302,6 +302,10 @@ raise them.
 
   Bandwidth usage is gradually reduced over time by "refunding" a
   proportional part of the limit every now and then.
+
+  Note from ElectronX maintainers: Despite what the above paragraph claims,
+  there is nothing in the codebase for rate-limiting abusive clients via
+  sleep calls or any such thing.
 
 .. envvar:: SESSION_TIMEOUT
 
