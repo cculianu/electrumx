@@ -209,21 +209,32 @@ These environment variables are optional:
 
 .. envvar:: BLACKLIST_URL
 
-  The URL from which to download the blacklist.json file.  This blacklist is
-  maintained by the ElectronX developers and the Bitcoin Cash server operator
-  community to provide a convenient list of currently-active phisher/sybil
-  nodes.  This mechanism has been added in April 2019 due to excessive phishing
-  and sybil attacks on the Bitcoin Cash ElectrumX/ElectronX network.  This file
-  contains a list of IP addresses (and hostname globs) to auto-ban at startup.
-  The file is refreshed from the server every 5 minutes (configurable via the
-  :envvar:`BLACKLIST_POLL_INTERVAL` variable) and any new entries are added to
-  the ban list and old entries no longer in the file are removed from the ban
-  list.  Care has been taken so that this file's ban lists do not conflict
-  with whatever you specify via the rpc 'banip' or 'banhost' commands.
-  Set this to the empty string `""` to disable this feature. Defaults to:
-  `https://raw.githubusercontent.com/Electron-Cash/electronx-blacklist/master/blacklist.json`.
+  The URL from which to download the blacklist.json file. The blacklist file
+  contains a list of IP addresses (and/or hostname globs) to ban.
+
+  URL types currently supported are `http://`, `https://`, and `file://`.
+  (Note that `file://` will poll a local file as if it were a remote server.
+  Only absolute paths are supported for `file://` URLs, e.g:
+  `file:///path/to/file.json`).
+
+  The default blacklist is maintained by the ElectronX developers and the
+  Bitcoin Cash server operator community to provide a convenient list of
+  currently-active phisher/sybil nodes.  This list is updated frequently.
+  This mechanism has been added in April 2019 as of version 1.10.0 due to
+  excessive phishing and sybil attacks on the Bitcoin Cash ElectrumX/ElectronX
+  network.
+
+  The file is refreshed from the server (or local disk if using `file://`)
+  every 5 minutes (configurable via the :envvar:`BLACKLIST_POLL_INTERVAL`
+  variable) and any new entries are added to the ban list and old entries no
+  longer in the file are removed from the ban list.  Care has been taken so that
+  this file's ban lists do clobber whatever you may specify via the rpc 'banip'
+  or 'banhost' commands.
+
+  Set this environment variable to the empty string `""` to disable this feature.
+  Defaults to: `https://raw.githubusercontent.com/Electron-Cash/electronx-blacklist/master/blacklist.json`.
   (If you would like to contribute to this blacklist please visit:
-  https://github.com/Electron-Cash/electronx-blacklist/).
+  `https://github.com/Electron-Cash/electronx-blacklist/`).
 
 .. envvar:: BLACKLIST_POLL_INTERVAL
 

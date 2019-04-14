@@ -465,13 +465,38 @@ class SessionManager(object):
             self.logger.info("Blacklist download disabled")
             return
         self.logger.info(f"Blacklist will be downloaded every {sleeptime:0.2f} secs from URL: {URL}")
-        class BadResponse(Exception):
+        class BadResponse(RuntimeError):
             pass
-        async def fetch(client):
-            async with client.get(URL) as resp:
-                if resp.status == 200:
-                    return await resp.text()
-                raise BadResponse(f'Bad Response: {resp.status}')
+        class UnknownURLType(RuntimeError):
+            pass
+        async def get_blacklist(URL):
+            async def get_via_http(URL):
+                async def fetch(URL, client):
+                    async with client.get(URL, allow_redirects=True) as resp:
+                        if resp.status == 200:
+                            return await resp.text()
+                        raise BadResponse(f'Bad Response: {resp.status}')
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30.0)) as client:
+                    text = await fetch(URL, client)
+                return text
+            async def get_via_file(URL):
+                ''' Despite this function's async coloration, there is nothing
+                async about it and we just declare it as such to keep this function
+                interchangeable with get_via_http() above which *is* async '''
+                fn = URL.split(':', 1)[-1] # shop off whatever is before file:, if anything
+                while fn.startswith('/'):  # keep chopping off leading '/'
+                    fn = fn[1:]
+                fn = os.sep + fn # always absolute path
+                with open(fn, 'rt', encoding='utf-8', errors='strict') as f:
+                    text = f.read()
+                return text
+            tokens = URL.split(':', 1)
+            if len(tokens) == 1 or tokens[0].lower() in ('file',):
+                return await get_via_file(URL)
+            elif tokens[0].lower() in ('http', 'https'):
+                return await get_via_http(URL)
+            raise UnknownURLType(f"Don't know how to handle URL {URL}")
+
         def convert_from_electrumx_blacklist(bl):
             ret = {
                 'blacklist-ips' : [],
@@ -513,8 +538,7 @@ class SessionManager(object):
             t0  = time.time()
             err = True
             try:
-                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30.0)) as client:
-                    text = await fetch(client)
+                text = await get_blacklist(URL)
                 blacklist = json.loads(text)
                 bl, blh = None, None
                 if isinstance(blacklist, list):
@@ -545,9 +569,9 @@ class SessionManager(object):
                         self.logger.info("Blacklist hosts unchanged...")
                     last_blacklist_hosts = blh
                 if err:
-                    self.logger.error("No valid data found in the downloaded blacklist")
-            except (aiohttp.ClientError, BadResponse) as e:
-                self.logger.error(f"Error downloading blacklist: {repr(e)}")
+                    self.logger.error("No valid data found in the retrieved blacklist")
+            except (aiohttp.ClientError, BadResponse, UnknownURLType) as e:
+                self.logger.error(f"Error retrieving blacklist: {repr(e)}")
             except json.decoder.JSONDecodeError as e:
                 self.logger.error(f"Error decoding blacklist: {e}")
             except BaseException as e:
