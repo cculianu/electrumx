@@ -252,24 +252,27 @@ raise them.
 
 .. envvar:: MAX_SESSIONS_PER_IP
 
-  The maximum number of simultaneous (non-Tor) client connections permitted
-  from a single IP address. If a client has more than this many connections,
-  subsequent connections will be disallowed. In addition if
+  The maximum number of simultaneous (non-localhost, non-Tor) client connections
+  permitted from a single IP address. If a client has more than this many
+  connections, subsequent connections will be disallowed. In addition if
   :envvar:`BAN_EXCESSIVE_CONNECTIONS` is `1` (the default), the offending
-  client will be automatically banned. Defaults to 50.
+  client will be automatically banned (unless it's coming from a Tor proxy or
+  from localhost, in which case it will never be banned).
+  Defaults to 50.
 
-.. envvar:: MAX_SESSIONS_LOCAL
+.. envvar:: MAX_SESSIONS_TOR
 
-  The maximum number of simultaneous Tor client connections permitted
-  from localhost. If locahost has more than this many connections,
-  subsequent connections will be disallowed. Banning rules are never
-  applied to localhost. Defaults to 1000.
+  The maximum number of simultaneous client connections permitted from
+  Tor clients. If there are more than this many connections from the Tor
+  IP address (usually, but not always, localhost), subsequent connections will
+  be disallowed.  Banning rules are never applied to Tor clients.
+  Defaults to 1000.
 
 .. envvar:: BAN_EXCESSIVE_CONNECTIONS
 
   If 1 (the default), then clients exceeding :envvar:`MAX_SESSIONS_PER_IP` will
-  be automatically banned. This ban is never applied to localhost clients
-  (Tor clients). Defaults to 1.
+  be automatically banned. This ban is never applied to localhost clients and/or
+  to Tor clients. Defaults to 1.
 
 .. envvar:: MAX_SEND
 

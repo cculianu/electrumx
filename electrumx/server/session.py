@@ -19,7 +19,7 @@ import ssl
 import time
 from collections import defaultdict
 from functools import partial
-from ipaddress import ip_address
+from ipaddress import ip_address, IPv4Address, IPv6Address
 
 from aiorpcx import (
     RPCSession, JSONRPCAutoDetect, JSONRPCConnection,
@@ -117,6 +117,7 @@ class SessionManager(object):
         self.bp = bp
         self.daemon = daemon
         self.mempool = mempool
+        self.localhost_ips = (ip_address('127.0.0.1'), ip_address('::1'))  # IPv4 and IPv6 localhost. We use this for session IP limit logic
         self.peer_mgr = PeerManager(env, db, self)
         self.shutdown_event = shutdown_event
         self.logger = util.class_logger(__name__, self.__class__.__name__)
@@ -143,6 +144,7 @@ class SessionManager(object):
         self.ban_queue = set()
         self.ip_session_totals = defaultdict(int)
         self.max_sessions_per_ip = env.max_sessions_per_ip
+        self.max_sessions_tor = env.max_sessions_tor
 
         # Set up the RPC request handlers
         cmds = ('add_peer banhost banip daemon_url disconnect getenv getinfo '
@@ -852,17 +854,54 @@ class SessionManager(object):
         for session in self.sessions:
             await session.spawn(session.notify, touched, height_changed)
 
+    def is_tor(self, ipaddr):
+        ''' Returns True iff ipaddr is the same as our Tor proxy address.
+        If there is no Tor proxy running will always return False.
+        `ipaddr' may be a Python address object or a string.
+        Always returns a bool (even on invalid param). '''
+        if not ipaddr:
+            return False
+        tor_address = self.peer_mgr.proxy_ip_address()
+        if not tor_address:
+            return False
+        if not isinstance(ipaddr, (IPv4Address, IPv6Address)):
+            try:
+                ipaddr = ip_address(ipaddr)
+            except ValueError:
+                self.logger.error(f"is_tor: Failed to parse {ipaddr} as an IP address!")
+                return False
+        return ipaddr == tor_address
+
+    def is_localhost(self, ipaddr):
+        ''' Returns true iff ipaddr is IPv4 or IPv6 'localhost'.
+        `ipaddr' may be a Python address object or a string.
+        Always returns a bool (even on invalid param). '''
+        if not isinstance(ipaddr, (IPv4Address, IPv6Address)):
+            try: ipaddr = ip_address(ipaddr)
+            except ValueError: return False
+        return ipaddr in self.localhost_ips
+
+    def _get_ipaddr_limit(self, ipaddr):
+        ''' Returns the connection limit for ipaddr. Returned value will be either
+        self.max_sessions_per_ip or self.max_sessions_tor, depending on ipaddr.
+        ipaddr may be either a string or a Python address object. Note that
+        localhost IP addresses return the max_sessions_tor limit regardless of
+        whether Tor is running or if its proxy is at localhost or not. '''
+        return (self.max_sessions_per_ip, self.max_sessions_tor)[int(bool(self.is_localhost(ipaddr) or self.is_tor(ipaddr)))]
+
     def can_add_session(self, session):
-        ''' Checks the ban list and also the max_sessions_per_ip, and returns
-        True if ok, False if limit reached or banned. '''
+        ''' Checks the ban list and also the max_sessions_per_ip and/or
+        max_sessions_tor, and returns True if ok, False if limit reached or banned. '''
         ipaddr = session.peer_ip_address()
         if ipaddr in self.banned_ips:
             return False, f'IP {ipaddr} is banned'
-        if ipaddr and self.ip_session_totals[ipaddr] >= self.max_sessions_per_ip:
-            if self.env.ban_excessive_connections and not session.is_tor():
+        if ipaddr and self.ip_session_totals[ipaddr] >= self._get_ipaddr_limit(ipaddr):
+            is_local_or_tor = bool(self.is_localhost(ipaddr) or self.is_tor(ipaddr))
+            desc = ('max_sessions_per_ip', 'max_sessions_tor')[int(is_local_or_tor)]
+            if self.env.ban_excessive_connections and not is_local_or_tor:
                 self.ban_queue.add(ipaddr)
                 self.session_event.set()
-            return False, f'IP {ipaddr} has reached max_session_per_ip ({self.max_sessions_per_ip})'
+            return False, f'IP {ipaddr} has reached the {desc} limit ({self._get_ipaddr_limit(ipaddr)})'
         return True, ''
 
     def add_session(self, session):
@@ -967,7 +1006,7 @@ class SessionBase(RPCSession):
         if cannot parse '''
         pa = self.peer_address()
         if not pa:
-            self.logger.error(f'NO IP address for {self}')
+            self.logger.warning(f'NO IP address for {self}')
             return None
         try:
             return ip_address(pa[0])
@@ -1022,9 +1061,16 @@ class SessionBase(RPCSession):
         return await coro
 
     def is_tor(self):
-        ''' Subclasses should override this '''
-        return False
+        ''' Returns True iff this session came from the same address as the
+        Tor proxy (if there is a Tor proxy), False otherwise. '''
+        my_address = self.peer_ip_address()
+        return my_address and self.session_mgr.is_tor(my_address)
 
+    def is_localhost(self):
+        ''' Returns True iff this session came from a localhost IPv4 and/or
+        IPv6 address, False otherwise. '''
+        my_address = self.peer_ip_address()
+        return my_address and self.session_mgr.is_localhost(my_address)
 
 class ElectrumX(SessionBase):
     '''A TCP server that handles incoming Electrum connections.'''
@@ -1352,15 +1398,6 @@ class ElectrumX(SessionBase):
         height: the header's height'''
         height = non_negative_integer(height)
         return await self.session_mgr.electrum_header(height)
-
-    def is_tor(self):
-        '''Try to detect if the connection is to a tor hidden service we are
-        running.'''
-        peername = self.peer_mgr.proxy_peername()
-        if not peername:
-            return False
-        peer_address = self.peer_address()
-        return peer_address and peer_address[0] == peername[0]
 
     async def replaced_banner(self, banner):
         network_info = await self.daemon_request('getnetworkinfo')
