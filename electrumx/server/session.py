@@ -145,9 +145,9 @@ class SessionManager(object):
         self.max_sessions_per_ip = env.max_sessions_per_ip
 
         # Set up the RPC request handlers
-        cmds = ('add_peer banhost banip daemon_url disconnect getinfo groups '
-                'listbanned log peers query reorg sessions stop '
-                'unbanhost unbanip'.split())
+        cmds = ('add_peer banhost banip daemon_url disconnect getenv getinfo '
+                'groups listbanned log peers query reorg sessions '
+                'session_ip_counts stop unbanhost unbanip'.split())
         LocalRPC.request_handlers = {cmd: getattr(self, 'rpc_' + cmd)
                                      for cmd in cmds}
 
@@ -665,6 +665,20 @@ class SessionManager(object):
         '''Return summary information about the server process.'''
         return self._get_info()
 
+    async def rpc_getenv(self):
+        '''Return a all the env vars used to configure the server. '''
+        env = {}
+        for name in dir(self.env).copy():
+            if name.startswith('_'):
+                continue
+            value = getattr(self.env, name, None)
+            if not isinstance(value, (str, int, float, bool)):
+                continue
+            if isinstance(value, bool):
+                value = "1" if value else ""  # Map bools to non-empty/empty strings to match how they are parsed
+            env[name.upper()] = value
+        return env
+
     async def rpc_groups(self):
         '''Return statistics about the session groups.'''
         return self._group_data()
@@ -727,6 +741,10 @@ class SessionManager(object):
     async def rpc_sessions(self):
         '''Return statistics about connected sessions.'''
         return self._session_data(for_log=False)
+
+    async def rpc_session_ip_counts(self):
+        ''' Return the total counts of sessions for each IP addresses '''
+        return {str(k):v for k,v in self.ip_session_totals.copy().items() if v != 0}
 
     async def rpc_reorg(self, count):
         '''Force a reorg of the given number of blocks.
