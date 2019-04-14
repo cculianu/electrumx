@@ -265,7 +265,9 @@ raise them.
   The maximum number of simultaneous client connections permitted from
   Tor clients. If there are more than this many connections from the Tor
   IP address (usually, but not always, localhost), subsequent connections will
-  be disallowed.  Banning rules are never applied to Tor clients.
+  be disallowed.  Banning rules are never applied to Tor clients.  This value
+  cannot be set to less than 10 as it would interfere with normal server
+  operation to do so (since this limit is also used for localhost connections).
   Defaults to 1000.
 
 .. envvar:: BAN_EXCESSIVE_CONNECTIONS
