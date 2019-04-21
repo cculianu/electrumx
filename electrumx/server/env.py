@@ -64,6 +64,7 @@ class Env(EnvBase):
         self.force_proxy = self.boolean('FORCE_PROXY', False)
         self.tor_proxy_host = self.default('TOR_PROXY_HOST', 'localhost')
         self.tor_proxy_port = self.integer('TOR_PROXY_PORT', None)
+        self.tor_peer_discovery = self.tor_peer_discovery_parse()
         # The electrum client takes the empty string as unspecified
         self.donation_address = self.default('DONATION_ADDRESS', '')
         # Server limits to help prevent DoS
@@ -177,3 +178,9 @@ class Env(EnvBase):
             return self.PD_SELF
         else:
             return self.PD_ON
+
+    def tor_peer_discovery_parse(self):
+        tpd = self.default('TOR_PEER_DISCOVERY', 'off').strip().lower()  # if 'on', we forward .onion peers we hear about. otherwise off (due to sybil attack issues)
+        if tpd in ('on', 'yes', 'true', '1', 'enabled', 'enable'):
+            return True
+        return False

@@ -121,12 +121,15 @@ class PeerManager(object):
         return my.features
 
     def _permit_new_onion_peer(self):
-        '''Accept a new onion peer only once per random time interval.'''
+        '''Accept a new onion peer only once per random time interval, and
+        only iff self.env.tor_peer_discovery is True.'''
+        if not self.env.tor_peer_discovery:
+            return False, 'tor peer discovery disabled'
         now = time.time()
         if now < self.permit_onion_peer_time:
-            return False
+            return False, 'rate limiting'
         self.permit_onion_peer_time = now + random.randrange(0, 1200)
-        return True
+        return True, 'ok'
 
     async def _import_peers(self):
         '''Import hard-coded peers from a file or the coin defaults.'''
@@ -462,8 +465,7 @@ class PeerManager(object):
         peer = peers[0]
         host = peer.host
         if peer.is_tor:
-            permit = self._permit_new_onion_peer()
-            reason = 'rate limiting'
+            permit, reason = self._permit_new_onion_peer()  # check if tor_peer_discovery is enabled and also if sufficient time has passed since we added tor peers (we rate limit tor even if discovery is enabled)
         else:
             getaddrinfo = asyncio.get_event_loop().getaddrinfo
             try:
