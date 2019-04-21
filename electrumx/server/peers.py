@@ -38,6 +38,9 @@ class BannedPeer(BadPeerError):
 class DupePeer(BadPeerError):
     pass
 
+class TorPeerDiscoveryDisabled(BadPeerError):
+    pass
+
 def assert_good(message, result, instance):
     if not isinstance(result, instance):
         raise BadPeerError(f'{message} returned bad result type '
@@ -250,6 +253,9 @@ class PeerManager(object):
             except BannedPeer as e:
                 self.logger.error(f'{peer_text} is banned: ({e})')
                 return True # It's banend, so should drop it
+            except TorPeerDiscoveryDisabled as e:
+                self.logger.error(f'{peer_text} tor discovery: ({e})')
+                return True # Cut off tor peers from the get-go
             except BadPeerError as e:
                 self.logger.error(f'{peer_text} marking bad: ({e})')
                 peer.mark_bad()
@@ -307,6 +313,8 @@ class PeerManager(object):
                 dupes = self._dupes_for_peer(peer.ip_addr)
                 if dupes:
                     raise DupePeer(f'Peer {peer} is a dupe! {len(dupes)} other peers with IP {peer.ip_addr} were found!')
+        elif not self.env.tor_peer_discovery and peer.host not in [i.host for i in self.env.identities if i.nick_suffix == '_tor']:
+            raise TorPeerDiscoveryDisabled(f'Tor peer discovery is disabled: {peer.host}')
         banned_suffix = self.session_mgr.does_peer_match_hostname_ban(peer)
         if banned_suffix:
             raise BannedPeer(f'Peer matches banned hostname suffix {banned_suffix}')
