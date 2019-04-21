@@ -184,3 +184,33 @@ class Env(EnvBase):
         if tpd in ('on', 'yes', 'true', '1', 'enabled', 'enable'):
             return True
         return False
+
+
+    def get_info(self):
+        ''' Used by rpc_getenv to get all the env vars we are using. '''
+        env = {}
+        for name in dir(self).copy():
+            if name.startswith('_'):
+                continue
+            value = getattr(self, name, None)
+            if not isinstance(value, (str, int, float, bool)):
+                continue
+            if isinstance(value, bool):
+                value = "1" if value else ""  # Map bools to non-empty/empty strings to match how they are parsed
+            env[name.upper()] = value
+        # now mogrify some values
+        env['PEER_DISCOVERY'] = {
+            self.PD_ON : "on", self.PD_OFF : "off", self.PD_SELF : "self"
+        }.get(self.peer_discovery, 'on')
+        env['PEER_DISCOVERY_TOR'] = "on" if self.peer_discovery_tor else "off"
+        clear_id = self.clearnet_identity()
+        tor_id = self.tor_identity(clear_id)
+        if tor_id is not None:
+            env['REPORT_HOST_TOR'] = str(tor_id.host)
+            env['REPORT_TCP_PORT_TOR'] = str(tor_id.tcp_port)
+            env['REPORT_SSL_PORT_TOR'] = str(tor_id.ssl_port)
+        if clear_id is not None:
+            env['REPORT_HOST'] = str(clear_id.host)
+            env['REPORT_TCP_PORT'] = str(clear_id.tcp_port)
+            env['REPORT_SSL_PORT'] = str(clear_id.ssl_port)
+        return env
