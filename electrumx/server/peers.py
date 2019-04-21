@@ -125,8 +125,8 @@ class PeerManager(object):
 
     def _permit_new_onion_peer(self):
         '''Accept a new onion peer only once per random time interval, and
-        only iff self.env.tor_peer_discovery is True.'''
-        if not self.env.tor_peer_discovery:
+        only iff self.env.peer_discovery_tor is True.'''
+        if not self.env.peer_discovery_tor:
             return False, 'tor peer discovery disabled'
         now = time.time()
         if now < self.permit_onion_peer_time:
@@ -313,7 +313,7 @@ class PeerManager(object):
                 dupes = self._dupes_for_peer(peer.ip_addr)
                 if dupes:
                     raise DupePeer(f'Peer {peer} is a dupe! {len(dupes)} other peers with IP {peer.ip_addr} were found!')
-        elif not self.env.tor_peer_discovery and peer.host not in [i.host for i in self.env.identities if i.nick_suffix == '_tor']:
+        elif not self.env.peer_discovery_tor and peer.host not in [i.host for i in self.env.identities if i.nick_suffix == '_tor']:
             raise TorPeerDiscoveryDisabled(f'Tor peer discovery is disabled: {peer.host}')
         banned_suffix = self.session_mgr.does_peer_match_hostname_ban(peer)
         if banned_suffix:
@@ -473,7 +473,7 @@ class PeerManager(object):
         peer = peers[0]
         host = peer.host
         if peer.is_tor:
-            permit, reason = self._permit_new_onion_peer()  # check if tor_peer_discovery is enabled and also if sufficient time has passed since we added tor peers (we rate limit tor even if discovery is enabled)
+            permit, reason = self._permit_new_onion_peer()  # check if peer_discovery_tor is enabled and also if sufficient time has passed since we added tor peers (we rate limit tor even if discovery is enabled)
         else:
             getaddrinfo = asyncio.get_event_loop().getaddrinfo
             try:
