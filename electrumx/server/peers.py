@@ -172,7 +172,18 @@ class PeerManager(object):
         new_peers = []
         match_set = self.peers.copy()
         for peer in peers:
-            if not peer.is_public or (peer.is_tor and not self.proxy):
+            if not peer.is_public:
+                continue
+            if peer.is_tor:
+                if not self.proxy:
+                    # silently ignore tor if no tor proxy
+                    continue
+                if not self.env.peer_discovery_tor:
+                    self.logger.info(f'refusing to consider peer "{peer}" because tor peer discovery is disabled.')
+                    continue
+            banned_suffix = self.session_mgr.does_peer_match_hostname_ban(peer)
+            if banned_suffix:
+                self.logger.info(f'refusing to consider peer "{peer}" - matches banned hostname suffix {banned_suffix}')
                 continue
 
             matches = peer.matches(match_set)
