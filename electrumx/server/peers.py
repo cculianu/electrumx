@@ -179,11 +179,11 @@ class PeerManager(object):
                     # silently ignore tor if no tor proxy
                     continue
                 if not self.env.peer_discovery_tor:
-                    self.logger.info(f'refusing to consider peer "{peer}" because tor peer discovery is disabled.')
+                    self.logger.info(f'refusing peer "{peer}" (tor peer discovery is disabled)')
                     continue
             banned_suffix = self.session_mgr.does_peer_match_hostname_ban(peer)
             if banned_suffix:
-                self.logger.info(f'refusing to consider peer "{peer}" - matches banned hostname suffix {banned_suffix}')
+                self.logger.info(f'refusing peer "{peer}" (banned: {banned_suffix})')
                 continue
 
             matches = peer.matches(match_set)
