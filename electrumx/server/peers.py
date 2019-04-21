@@ -179,11 +179,11 @@ class PeerManager(object):
                     # silently ignore tor if no tor proxy
                     continue
                 if not self.env.peer_discovery_tor:
-                    self.logger.info(f'refusing peer "{peer}" (tor peer discovery is disabled)')
+                    self.logger.warning(f'refusing peer "{peer}" (tor peer discovery is disabled)')
                     continue
             banned_suffix = self.session_mgr.does_peer_match_hostname_ban(peer)
             if banned_suffix:
-                self.logger.info(f'refusing peer "{peer}" (banned: {banned_suffix})')
+                self.logger.warning(f'refusing peer "{peer}" (banned: {banned_suffix})')
                 continue
 
             matches = peer.matches(match_set)
@@ -227,6 +227,10 @@ class PeerManager(object):
                 peer.retry_event.clear()
 
     async def _should_drop_peer(self, peer):
+        banned_suffix = self.session_mgr.does_peer_match_hostname_ban(peer)
+        if banned_suffix:
+            self.logger.warning(f'Peer {peer} matches banned hostname suffix {banned_suffix} (dropping)')
+            return True
         peer.try_count += 1
         is_good = False
         for kind, port, family in peer.connection_tuples():
@@ -545,11 +549,12 @@ class PeerManager(object):
             random.shuffle(bucket_peers)
             peers.update(bucket_peers[:2])
 
-        # Add up to 20% onion peers (but up to 10 is OK anyway)
-        random.shuffle(onion_peers)
-        max_onion = 50 if is_tor else max(10, len(peers) // 4)
+        if self.env.peer_discovery_tor:
+            # Add up to 20% onion peers (but up to 10 is OK anyway)
+            random.shuffle(onion_peers)
+            max_onion = 50 if is_tor else max(10, len(peers) // 4)
 
-        peers.update(onion_peers[:max_onion])
+            peers.update(onion_peers[:max_onion])
 
         return [peer.to_tuple() for peer in peers]
 
