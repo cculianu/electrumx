@@ -555,6 +555,8 @@ class PeerManager(object):
             max_onion = 50 if is_tor else max(10, len(peers) // 4)
 
             peers.update(onion_peers[:max_onion])
+        elif onion_peers:
+            self.logger.info(f'Not forwarding {len(onion_peers)} .onion peers (tor peer discovery is disabled)')
 
         return [peer.to_tuple() for peer in peers]
 
